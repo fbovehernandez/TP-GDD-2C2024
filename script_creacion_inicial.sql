@@ -1,6 +1,6 @@
 USE GD2C2024
 GO
-CREATE SCHEMA SARTEN_que_ladra -- Ya existe
+CREATE SCHEMA SARTEN_que_ladra 
 GO
 
 -- DROP SCHEMA SARTEN_QUE_LADRA;
@@ -15,9 +15,9 @@ CREATE TABLE SARTEN_QUE_LADRA.Rubro (
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.Subrubro (
-	subrubro_id DECIMAL(18,0) PRIMARY KEY,
+	subrubro_id DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	subrubro_rubro NVARCHAR(50)
-); SI
+); 
 
 CREATE TABLE SARTEN_QUE_LADRA.SubrubroXRubro (
 	subrubro_id DECIMAL(18,0),
@@ -36,23 +36,22 @@ CREATE TABLE SARTEN_QUE_LADRA.Modelo (
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.Producto (
-	producto_codigo NVARCHAR(50) PRIMARY KEY,
+	producto_id DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
+	producto_codigo NVARCHAR(50),
 	producto_descripcion NVARCHAR(50),
-	subrubro_id DECIMAL(18,0),
-	modelo_codigo DECIMAL(18,0),
 	producto_precio DECIMAL(18,2),
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.MarcaXProducto (
-	producto_codigo NVARCHAR(50),
+	producto_id NVARCHAR(50),
 	marca_id DECIMAL(18,0),
-	PRIMARY KEY (producto_codigo, marca_id),
+	PRIMARY KEY (producto_id, marca_id),
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.ProductoXSubrubro (
-	producto_codigo NVARCHAR(50),
+	producto_id NVARCHAR(50),
 	subrubro_id DECIMAL(18,0),
-	PRIMARY KEY (producto_codigo, subrubro_id),
+	PRIMARY KEY (producto_id, subrubro_id),
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.Provincia (
@@ -90,7 +89,7 @@ CREATE TABLE SARTEN_QUE_LADRA.DomicilioXUsuario(
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.Cliente (
-	cliente_id DECIMAL(18,0) PRIMARY KEY,
+	cliente_id DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	cliente_nombre NVARCHAR(50),
 	cliente_apellido NVARCHAR(50),
 	cliente_fecha_nac DATE,
@@ -156,7 +155,7 @@ CREATE TABLE SARTEN_QUE_LADRA.Publicacion (
 	publicacion_precio DECIMAL(18,2),
 	publicacion_costo DECIMAL(18,2),
 	publicacion_porc_venta DECIMAL(18,2),
-	producto_codigo NVARCHAR(50),
+	producto_id NVARCHAR(50),
 	vendedor_id DECIMAL(18,0),
 	almacen_codigo DECIMAL(18,0),
 );
@@ -168,7 +167,7 @@ CREATE TABLE SARTEN_QUE_LADRA.Concepto (
 	subtotal DECIMAL(18,2)
 );
 
-CREATE TABLE SARTEN_QUE_LADRA.DetalleFactura(
+CREATE TABLE SARTEN_QUE_LADRA.DetalleFactura (
 	detalle_factura_id DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	publicacion_codigo DECIMAL(18,0),
 	detalle_concepto_id DECIMAL(18,0),
@@ -177,20 +176,21 @@ CREATE TABLE SARTEN_QUE_LADRA.DetalleFactura(
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.DetalleVenta(
+	detalle_venta_id DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	venta_codigo DECIMAL(18,0),
 	detalle_concepto_id DECIMAL(18,0),
 	publicacion_codigo DECIMAL(18,0),
 	detalle_venta_total DECIMAL(18,2),
 );
 
-CREATE TABLE Pago (
+CREATE TABLE SARTEN_QUE_LADRA.Pago (
 	id_pago DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	venta_codigo DECIMAL(18,0),
 	pago_importe DECIMAL(18,2),
 	pago_fecha DATE 
 )
 
-CREATE TABLE DetallePago (
+CREATE TABLE SARTEN_QUE_LADRA.DetallePago (
 	detalle_pago_id DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	tarjeta_numero NVARCHAR(50),
 	tarjeta_fecha_vencimiento DATE,
@@ -198,18 +198,18 @@ CREATE TABLE DetallePago (
 	id_medio_x_pago DECIMAL(18,0),
 )
 
-CREATE TABLE TipoMedioPago (
+CREATE TABLE SARTEN_QUE_LADRA.TipoMedioPago (
 	id_medio_pago DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	tipo_medio_pago NVARCHAR(50)
 )
 
-CREATE TABLE MedioPago(
-	id_medio_de_pago DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
+CREATE TABLE SARTEN_QUE_LADRA.MedioPago(
+	id_tipo_medio_de_pago DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	medio_de_pago NVARCHAR(50),
 	tipo_medio_pago DECIMAL(18,0),
 );
 
-CREATE TABLE MedioXPago(
+CREATE TABLE SARTEN_QUE_LADRA.MedioXPago(
 	id_medio_x_pago DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	id_pago DECIMAL(18,0),
 	id_medio_de_pago DECIMAL(18,0),
@@ -223,10 +223,6 @@ CREATE TABLE MedioXPago(
 -- FK -> SubrubroXRubro
 ALTER TABLE SARTEN_QUE_LADRA.SubrubroXRubro ADD CONSTRAINT fk_subrubroxrubro_rubro_id FOREIGN KEY (rubro_id) REFERENCES SARTEN_QUE_LADRA.Rubro (rubro_id);
 ALTER TABLE SARTEN_QUE_LADRA.SubrubroXRubro ADD CONSTRAINT fk_subrubroxrubro_subrubro_id FOREIGN KEY (subrubro_id) REFERENCES SARTEN_QUE_LADRA.Subrubro (subrubro_id);
-
--- FK -> Producto
-ALTER TABLE SARTEN_QUE_LADRA.Producto ADD CONSTRAINT fk_producto_subrubro FOREIGN KEY (subrubro_id) REFERENCES SARTEN_QUE_LADRA.Subrubro (subrubro_id);
-ALTER TABLE SARTEN_QUE_LADRA.Producto ADD CONSTRAINT fk_producto_modelo FOREIGN KEY (modelo_codigo) REFERENCES SARTEN_QUE_LADRA.Modelo (modelo_codigo);
 
 -- FK -> MarcaXProducto
 ALTER TABLE SARTEN_QUE_LADRA.MarcaXProducto ADD CONSTRAINT fk_marcaproducto_producto FOREIGN KEY (producto_codigo) REFERENCES SARTEN_QUE_LADRA.Producto (producto_codigo);
@@ -293,6 +289,63 @@ GO
 
 GO
 
+GO
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_LOCALIDAD
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.Localidad(localidad_nombre, provincia_id) 
+
+    SELECT DISTINCT CLI_USUARIO_DOMICILIO_LOCALIDAD, p.provincia_id FROM gd_esquema.Maestra
+	JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = CLI_USUARIO_DOMICILIO_PROVINCIA
+    WHERE CLI_USUARIO_DOMICILIO_LOCALIDAD IS NOT NULL
+
+	UNION
+
+	SELECT DISTINCT VEN_USUARIO_DOMICILIO_LOCALIDAD, p.provincia_id FROM gd_esquema.Maestra
+	JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = VEN_USUARIO_DOMICILIO_PROVINCIA
+    WHERE VEN_USUARIO_DOMICILIO_LOCALIDAD IS NOT NULL
+
+	UNION
+
+	SELECT DISTINCT ALMACEN_Localidad, p.provincia_id FROM gd_esquema.Maestra
+	JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = ALMACEN_Localidad
+    WHERE ALMACEN_Localidad IS NOT NULL
+END
+
+GO
+
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_MARCAXPRODUCTO
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.MarcaXProducto (producto_id, marca_id) 
+	SELECT DISTINCT producto_id, marca_id
+	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Marca marca ON maestra.PRODUCTO_MARCA = marca.marca_nombre
+									JOIN SARTEN_QUE_LADRA.Producto producto ON maestra.PRODUCTO_CODIGO = producto.producto_codigo AND maestra.PRODUCTO_PRECIO = producto.producto_precio
+	WHERE maestra.PRODUCTO_CODIGO IS NOT NULL AND PRODUCTO_MARCA IS NOT NULL;
+END
+
+SELECT PRODUCTO_CODIGO, PRODUCTO_DESCRIPCION,
+	PRODUCTO_MARCA, PRODUCTO_MOD_CODIGO, PRODUCTO_PRECIO, PRODUCTO_SUB_RUBRO, PRODUCTO_RUBRO_DESCRIPCION from gd_esquema.Maestra
+WHERE PRODUCTO_CODIGO = 'Codigo:6131231312' and PRODUCTO_SUB_RUBRO = 'Sub_Rubro Nº476791'
+
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PRODUCTO
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.Producto(producto_codigo, producto_descripcion, producto_precio)
+	SELECT DISTINCT PRODUCTO_CODIGO, PRODUCTO_DESCRIPCION, PRODUCTO_PRECIO from gd_esquema.Maestra
+	WHERE PRODUCTO_CODIGO IS NOT NULL
+END
+
+EXEC SARTEN_QUE_LADRA.MIGRAR_PRODUCTO
+
+SELECT DISTINCT PRODUCTO_CODIGO, PRODUCTO_DESCRIPCION, PRODUCTO_PRECIO FROM gd_esquema.Maestra -- 6894
+where PRODUCTO_CODIGO = 'Codigo:0131231312'
+
+SELECT * FROM SARTEN_QUE_LADRA.Marca
+
+GO
+
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PROVINCIA 
 AS BEGIN 
     INSERT INTO SARTEN_QUE_LADRA.Provincia(provincia_nombre) 
@@ -323,6 +376,13 @@ END
 
 GO
 
+INSERT INTO SARTEN_QUE_LADRA.MarcaXProducto (producto_codigo, marca_id) 
+	SELECT DISTINCT maestra.PRODUCTO_CODIGO, sarten.marca_id
+	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Marca sarten ON maestra.PRODUCTO_MARCA = sarten.marca_nombre
+	WHERE PRODUCTO_CODIGO IS NOT NULL AND PRODUCTO_MARCA IS NOT NULL;
+
+GO
+
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_LOCALIDAD
 AS BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.Localidad(localidad_nombre, provincia_id) 
@@ -333,13 +393,15 @@ AS BEGIN
 
 	UNION
 
-	 SELECT DISTINCT VEN_USUARIO_DOMICILIO_LOCALIDAD, p.provincia_id FROM gd_esquema.Maestra
-	 JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = VEN_USUARIO_DOMICILIO_PROVINCIA
-     WHERE VEN_USUARIO_DOMICILIO_LOCALIDAD IS NOT NULL
+	SELECT DISTINCT VEN_USUARIO_DOMICILIO_LOCALIDAD, p.provincia_id FROM gd_esquema.Maestra
+	JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = VEN_USUARIO_DOMICILIO_PROVINCIA
+    WHERE VEN_USUARIO_DOMICILIO_LOCALIDAD IS NOT NULL
 
-	 SELECT DISTINCT ALMACEN_Localidad, p.provincia_id FROM gd_esquema.Maestra
-	 JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = ALMACEN_Localidad
-     WHERE ALMACEN_Localidad IS NOT NULL
+	UNION
+
+	SELECT DISTINCT ALMACEN_Localidad, p.provincia_id FROM gd_esquema.Maestra
+	JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = ALMACEN_Localidad
+    WHERE ALMACEN_Localidad IS NOT NULL
 END
 
 GO
