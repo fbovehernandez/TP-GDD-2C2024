@@ -99,7 +99,7 @@ CREATE TABLE SARTEN_QUE_LADRA.Cliente (
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.Vendedor(
-	localidad_id DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
+	vendedor_id DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	vendedor_cuit NVARCHAR(50),
 	vendedor_razon_social NVARCHAR(50),
 	vendedor_mail NVARCHAR(50),
