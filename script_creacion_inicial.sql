@@ -43,13 +43,13 @@ CREATE TABLE SARTEN_QUE_LADRA.Producto (
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.MarcaXProducto (
-	producto_id NVARCHAR(50),
+	producto_id DECIMAL(18,0),
 	marca_id DECIMAL(18,0),
 	PRIMARY KEY (producto_id, marca_id),
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.ProductoXSubrubro (
-	producto_id NVARCHAR(50),
+	producto_id DECIMAL(18,0),
 	subrubro_id DECIMAL(18,0),
 	PRIMARY KEY (producto_id, subrubro_id),
 );
@@ -155,7 +155,7 @@ CREATE TABLE SARTEN_QUE_LADRA.Publicacion (
 	publicacion_precio DECIMAL(18,2),
 	publicacion_costo DECIMAL(18,2),
 	publicacion_porc_venta DECIMAL(18,2),
-	producto_id NVARCHAR(50),
+	producto_id DECIMAL(18,0),
 	vendedor_id DECIMAL(18,0),
 	almacen_codigo DECIMAL(18,0),
 );
@@ -173,6 +173,7 @@ CREATE TABLE SARTEN_QUE_LADRA.DetalleFactura (
 	detalle_concepto_id DECIMAL(18,0),
 	detalle_factura_total DECIMAL(18,2),
 	factura_numero DECIMAL(18,0),
+	detalle_factura_tipo NVARCHAR(50)
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.DetalleVenta(
@@ -225,11 +226,11 @@ ALTER TABLE SARTEN_QUE_LADRA.SubrubroXRubro ADD CONSTRAINT fk_subrubroxrubro_rub
 ALTER TABLE SARTEN_QUE_LADRA.SubrubroXRubro ADD CONSTRAINT fk_subrubroxrubro_subrubro_id FOREIGN KEY (subrubro_id) REFERENCES SARTEN_QUE_LADRA.Subrubro (subrubro_id);
 
 -- FK -> MarcaXProducto
-ALTER TABLE SARTEN_QUE_LADRA.MarcaXProducto ADD CONSTRAINT fk_marcaproducto_producto FOREIGN KEY (producto_codigo) REFERENCES SARTEN_QUE_LADRA.Producto (producto_codigo);
+ALTER TABLE SARTEN_QUE_LADRA.MarcaXProducto ADD CONSTRAINT fk_marcaproducto_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto (producto_id);
 ALTER TABLE SARTEN_QUE_LADRA.MarcaXProducto ADD CONSTRAINT fk_marcaproducto_marca FOREIGN KEY (marca_id) REFERENCES SARTEN_QUE_LADRA.Marca (marca_id);
 
 -- FK -> ProductoXSubrubro
-ALTER TABLE SARTEN_QUE_LADRA.ProductoXSubrubro ADD CONSTRAINT fk_productosubrubro_producto FOREIGN KEY (producto_codigo) REFERENCES SARTEN_QUE_LADRA.Producto (producto_codigo);
+ALTER TABLE SARTEN_QUE_LADRA.ProductoXSubrubro ADD CONSTRAINT fk_productosubrubro_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto (producto_id);
 ALTER TABLE SARTEN_QUE_LADRA.ProductoXSubrubro ADD CONSTRAINT fk_productosubrubro_subrubro FOREIGN KEY (subrubro_id) REFERENCES SARTEN_QUE_LADRA.Subrubro (subrubro_id);
 
 -- FK -> Localidad
@@ -256,7 +257,7 @@ ALTER TABLE SARTEN_QUE_LADRA.Factura ADD CONSTRAINT fk_factura_vendedor FOREIGN 
 ALTER TABLE SARTEN_QUE_LADRA.Almacen ADD CONSTRAINT fk_almacen_localidad FOREIGN KEY (localidad_id) REFERENCES SARTEN_QUE_LADRA.Localidad;
 
 -- FK -> Publicacion
-ALTER TABLE SARTEN_QUE_LADRA.Publicacion ADD CONSTRAINT fk_publicacion_producto FOREIGN KEY (producto_codigo) REFERENCES SARTEN_QUE_LADRA.Producto;
+ALTER TABLE SARTEN_QUE_LADRA.Publicacion ADD CONSTRAINT fk_publicacion_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto;
 ALTER TABLE SARTEN_QUE_LADRA.Publicacion ADD CONSTRAINT fk_publicacion_vendedor FOREIGN KEY (vendedor_id) REFERENCES SARTEN_QUE_LADRA.Vendedor;
 ALTER TABLE SARTEN_QUE_LADRA.Publicacion ADD CONSTRAINT fk_publicacion_almacen FOREIGN KEY (almacen_codigo) REFERENCES SARTEN_QUE_LADRA.Almacen;
 
@@ -271,15 +272,15 @@ ALTER TABLE SARTEN_QUE_LADRA.DetalleVenta ADD CONSTRAINT fk_detalleventa_concept
 ALTER TABLE SARTEN_QUE_LADRA.DetalleVenta ADD CONSTRAINT fk_detalleventa_publicacion FOREIGN KEY (publicacion_codigo) REFERENCES SARTEN_QUE_LADRA.Publicacion;
 
 -- FK -> Pago
-ALTER TABLE Pago ADD CONSTRAINT fk_pago_venta FOREIGN KEY (venta_codigo) REFERENCES Venta;
+ALTER TABLE SARTEN_QUE_LADRA.Pago ADD CONSTRAINT fk_pago_venta FOREIGN KEY (venta_codigo) REFERENCES SARTEN_QUE_LADRA.Venta;
 
 -- FK -> MedioXPago
-ALTER TABLE MedioXPago ADD CONSTRAINT fk_mediopago_pago FOREIGN KEY (id_pago) REFERENCES Pago;
-ALTER TABLE MedioXPago ADD CONSTRAINT fk_mediopago_mediodepago FOREIGN KEY (id_medio_de_pago) REFERENCES MedioPago;
-ALTER TABLE MedioXPago ADD CONSTRAINT fk_mediopago_detallepago FOREIGN KEY (id_detalle_pago) REFERENCES DetallePago;
+ALTER TABLE SARTEN_QUE_LADRA.MedioXPago ADD CONSTRAINT fk_mediopago_pago FOREIGN KEY (id_pago) REFERENCES SARTEN_QUE_LADRA.Pago;
+ALTER TABLE SARTEN_QUE_LADRA.MedioXPago ADD CONSTRAINT fk_mediopago_mediodepago FOREIGN KEY (id_medio_de_pago) REFERENCES SARTEN_QUE_LADRA.MedioPago;
+ALTER TABLE SARTEN_QUE_LADRA.MedioXPago ADD CONSTRAINT fk_mediopago_detallepago FOREIGN KEY (id_detalle_pago) REFERENCES SARTEN_QUE_LADRA.DetallePago;
 
 -- FK -> MedioPago
-ALTER TABLE MedioPago ADD CONSTRAINT fk_mediopago_tipomediopago FOREIGN KEY (tipo_medio_pago) REFERENCES TipoMedioPago;
+ALTER TABLE SARTEN_QUE_LADRA.MedioPago ADD CONSTRAINT fk_mediopago_tipomediopago FOREIGN KEY (tipo_medio_pago) REFERENCES SARTEN_QUE_LADRA.TipoMedioPago;
 
 GO
 
@@ -310,7 +311,7 @@ AS BEGIN
 	JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = ALMACEN_Localidad
     WHERE ALMACEN_Localidad IS NOT NULL
 END
-
+EXEC SARTEN_QUE_LADRA.MIGRAR_LOCALIDAD
 GO
 
 GO
@@ -324,12 +325,14 @@ AS BEGIN
 	WHERE maestra.PRODUCTO_CODIGO IS NOT NULL AND PRODUCTO_MARCA IS NOT NULL;
 END
 
+EXEC SARTEN_QUE_LADRA.MIGRAR_MARCAXPRODUCTO
+
 SELECT PRODUCTO_CODIGO, PRODUCTO_DESCRIPCION,
 	PRODUCTO_MARCA, PRODUCTO_MOD_CODIGO, PRODUCTO_PRECIO, PRODUCTO_SUB_RUBRO, PRODUCTO_RUBRO_DESCRIPCION from gd_esquema.Maestra
 WHERE PRODUCTO_CODIGO = 'Codigo:6131231312' and PRODUCTO_SUB_RUBRO = 'Sub_Rubro Nº476791'
 
 GO
-
+//
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PRODUCTO
 AS BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.Producto(producto_codigo, producto_descripcion, producto_precio)
@@ -614,3 +617,4 @@ FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_NAME = 'ProductoX';
 
 DROP TABLE SARTEN_QUE_LADRA.ProductoX;
+
