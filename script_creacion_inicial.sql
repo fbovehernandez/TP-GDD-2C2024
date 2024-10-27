@@ -384,6 +384,15 @@ AS BEGIN
 END
 GO
 
+EXEC SARTEN_QUE_LADRA.MIGRAR_TIPO_ENVIO
+
+SELECT * FROM SARTEN_QUE_LADRA.TipoEnvio
+
+SELECT COUNT(DISTINCT ENVIO_TIPO) FROM gd_esquema.Maestra
+
+-- TIPO ENVIO MIGRACION
+GO
+
 -- Idem arriba, ver si conviene que tenga el ID
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_MODELO
 AS BEGIN
@@ -410,17 +419,26 @@ END
 GO
 
 DROP PROCEDURE SARTEN_QUE_LADRA.MIGRAR_USUARIO
-
+GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_USUARIO
 AS BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.Usuario(usuario_nombre, usuario_password, usuario_fecha_creacion)
 	SELECT DISTINCT CLI_USUARIO_NOMBRE, CLI_USUARIO_PASS, CLI_USUARIO_FECHA_CREACION from gd_esquema.Maestra
-	
+	WHERE CLI_USUARIO_NOMBRE IS NOT NULL
+
 	UNION 
 
 	SELECT DISTINCT VEN_USUARIO_NOMBRE, VEN_USUARIO_PASS, VEN_USUARIO_FECHA_CREACION from gd_esquema.Maestra
+	WHERE VEN_USUARIO_NOMBRE IS NOT NULL
 END 
 GO
+
+-- Ojo con esto, si pasa lo de que hay mismos usuarios para distintas personas, ya que estaria perdiendo (creo) el de una persona
+SELECT DISTINCT CLI_USUARIO_NOMBRE, CLI_USUARIO_PASS, CLI_USUARIO_FECHA_CREACION FROM gd_esquema.Maestra
+	WHERE CLI_USUARIO_NOMBRE IS NOT NULL
+UNION
+SELECT DISTINCT VEN_USUARIO_NOMBRE, VEN_USUARIO_PASS, VEN_USUARIO_FECHA_CREACION FROM gd_esquema.Maestra
+	WHERE VEN_USUARIO_NOMBRE IS NOT NULL -- 41.346
 
 EXEC SARTEN_QUE_LADRA.MIGRAR_USUARIO
 
@@ -428,11 +446,35 @@ SELECT * from SARTEN_QUE_LADRA.Usuario
 
 GO
 
+--MIGRACION USUARIO
+
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_CLIENTE
 AS BEGIN
-	-- CREO QUE SI PASA ESO DE QUE HAY VARIOS CLIENTES CON MISMO USUARIO, LO VOY A VER CUANDO LO MIGRE, PORQUE SINO
-	-- ME ESTOY VOLVIENDO LOCO Y NO LO VEO
+	INSERT INTO SARTEN_QUE_LADRA.Cliente(cliente_nombre, cliente_apellido, cliente_fecha_nac, cliente_mail, cliente_dni, usuario_id)
+	SELECT DISTINCT CLIENTE_NOMBRE, CLIENTE_APELLIDO, CLIENTE_FECHA_NAC, CLIENTE_MAIL, CLIENTE_DNI, u.usuario_id from gd_esquema.Maestra 
+		JOIN SARTEN_QUE_LADRA.Usuario u ON 
+		CLI_USUARIO_NOMBRE = u.usuario_nombre AND
+		CLI_USUARIO_PASS = u.usuario_password AND
+		CLI_USUARIO_FECHA_CREACION = u.usuario_fecha_creacion
 END
+
+EXEC SARTEN_QUE_LADRA.MIGRAR_CLIENTE
+
+SELECT * FROM SARTEN_QUE_LADRA.Cliente
+
+SELECT DISTINCT CLIENTE_NOMBRE, CLIENTE_APELLIDO, CLIENTE_FECHA_NAC, CLIENTE_MAIL, CLIENTE_DNI,
+	CLI_USUARIO_NOMBRE, CLI_USUARIO_PASS, CLI_USUARIO_FECHA_CREACION
+FROM gd_esquema.Maestra
+WHERE CLIENTE_NOMBRE IS NOT NULL -- 41.298
+
+EXEC SARTEN_QUE_LADRA.MIGRAR_CLIENTE
+
+SELECT * FROM SARTEN_QUE_LADRA.Cliente
+
+SELECT DISTINCT CLIENTE_NOMBRE, CLIENTE_APELLIDO, CLIENTE_FECHA_NAC, CLIENTE_MAIL, CLIENTE_DNI,
+	CLI_USUARIO_NOMBRE, CLI_USUARIO_PASS, CLI_USUARIO_FECHA_CREACION
+FROM gd_esquema.Maestra
+WHERE CLIENTE_NOMBRE IS NOT NULL -- 41.298
 GO
 
 ----------------------------------------------------------------------------------------------------
@@ -534,6 +576,35 @@ END
 
 GO
 
+--------mucho join
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_DOMICILIOXUSUARIO
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.DomicilioXUsuario (usuario_id, domicilio_id)
+	SELECT DISTINCT usuario_id, domicilio_id
+	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Usuario usuario ON (maestra.CLI_USUARIO_NOMBRE = usuario.usuario_nombre 
+										AND maestra.CLI_USUARIO_PASS = usuario.usuario_password 
+										AND maestra.CLI_USUARIO_FECHA_CREACION = usuario.usuario_fecha_creacion) 
+										OR (maestra.VEN_USUARIO_NOMBRE = usuario.usuario_nombre 
+										AND maestra.VEN_USUARIO_PASS = usuario.usuario_password 
+										AND maestra.VEN_USUARIO_FECHA_CREACION = usuario.usuario_fecha_creacion)
+									JOIN SARTEN_QUE_LADRA.Domicilio domicilio ON (maestra.CLI_USUARIO_DOMICILIO_CALLE = domicilio.domicilio_calle
+										AND maestra.CLI_USUARIO_DOMICILIO_CP = domicilio.domicilio_cp
+										AND maestra.CLI_USUARIO_DOMICILIO_NRO_CALLE = domicilio.domicilio_nro_calle
+										AND maestra.CLI_USUARIO_DOMICILIO_PISO = domicilio.domicilio_piso
+										AND maestra.CLI_USUARIO_DOMICILIO_DEPTO = domicilio.domicilio_depto)
+										OR (maestra.VEN_USUARIO_DOMICILIO_CALLE = domicilio.domicilio_calle
+										AND maestra.VEN_USUARIO_DOMICILIO_CP = domicilio.domicilio_cp
+										AND maestra.VEN_USUARIO_DOMICILIO_NRO_CALLE = domicilio.domicilio_nro_calle
+										AND maestra.VEN_USUARIO_DOMICILIO_PISO = domicilio.domicilio_piso
+										AND maestra.VEN_USUARIO_DOMICILIO_DEPTO = domicilio.domicilio_depto)
+									JOIN SARTEN_QUE_LADRA.Localidad localidad ON localidad.localidad_id = domicilio.localidad_id
+									JOIN SARTEN_QUE_LADRA.Provincia provincia ON provincia.provincia_id = localidad.provincia_id
+	WHERE usuario_id IS NOT NULL AND domicilio_id IS NOT NULL
+END
+
+
+GO
+
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PUBLICACION
 AS BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.Publicacion (publicacion_codigo, publicacion_descripcion, publicacion_stock, publicacion_fecha_fin, 
@@ -573,7 +644,19 @@ AS BEGIN
 END
 
 GO
----------------------
+-----
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_VENDEDOR
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.Envio(vendedor_cuit, vendedor_razon_social, vendedor_mail, usuario_id)
+	SELECT DISTINCT VENDEDOR_CUIT, VENDEDOR_RAZON_SOCIAL, VENDEDOR_MAIL, u.usuario_id from gd_esquema.Maestra 
+	JOIN SARTEN_QUE_LADRA.Usuario u ON 
+    VEN_USUARIO_NOMBRE = u.usuario_nombre AND
+    VEN_USUARIO_PASS = u.usuario_password AND
+    VEN_USUARIO_FECHA_CREACION = u.usuario_fecha_creacion
+END
+GO
+----------------
 -------------------------------------------
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_TIPO_MEDIO_PAGO
 AS BEGIN
@@ -649,8 +732,6 @@ CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_MEDIO_X_PAGO
 	SELECT pmd.id_medio_de_pago, p.id_pago, dp.detalle_pago_id
 	FROM SARTEN_QUE_LADRA.#PagoMedioDetalle pmd LEFT JOIN SARTEN_QUE_LADRA.Pago p ON (p.venta_codigo = pmd.venta_codigo) LEFT JOIN SARTEN_QUE_LADRA.DetallePago dp ON (dp.tarjeta_numero = pmd.tarjeta_numero)
 END
-
-GO
 
 GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_VENTA
@@ -745,9 +826,9 @@ EXEC SARTEN_QUE_LADRA.MIGRAR_MODELO;
 EXEC SARTEN_QUE_LADRA.MIGRAR_MODELOXPRODUCTO;
 EXEC SARTEN_QUE_LADRA.MIGRAR_RUBRO;
 EXEC SARTEN_QUE_LADRA.MIGRAR_SUBRUBRO;
-
 EXEC SARTEN_QUE_LADRA.MIGRAR_SUBRUBROXRUBRO;
 EXEC SARTEN_QUE_LADRA.MIGRAR_PRODUCTOXSUBRUBRO;
+EXEC SARTEN_QUE_LADRA.MIGRAR_USUARIO;
 
 
 -- BOLUDECES PARA PROBAR COSAS
@@ -762,6 +843,7 @@ SELECT * FROM SARTEN_QUE_LADRA.Rubro;
 SELECT * FROM SARTEN_QUE_LADRA.Subrubro;
 SELECT * FROM SARTEN_QUE_LADRA.SubrubroXRubro;
 SELECT * FROM SARTEN_QUE_LADRA.ProductoXSubrubro;
+SELECT * FROM SARTEN_QUE_LADRA.Usuario;
 
 SELECT DISTINCT producto_marca from gd_esquema.Maestra
 where PRODUCTO_MARCA IS NOT NULL
