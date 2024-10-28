@@ -231,11 +231,13 @@ CREATE TABLE SARTEN_QUE_LADRA.MedioXPago(
 --         CONSTRAINTS            --
 -- ============================== --
 
-ALTER TABLE SARTEN_QUE_LADRA.Venta ADD CONSTRAINT fk_venta_cliente FOREIGN KEY (cliente_id) REFERENCES SARTEN_QUE_LADRA.Cliente;
-
 -- FK -> SubrubroXRubro
 ALTER TABLE SARTEN_QUE_LADRA.SubrubroXRubro ADD CONSTRAINT fk_subrubroxrubro_rubro_id FOREIGN KEY (rubro_id) REFERENCES SARTEN_QUE_LADRA.Rubro (rubro_id);
 ALTER TABLE SARTEN_QUE_LADRA.SubrubroXRubro ADD CONSTRAINT fk_subrubroxrubro_subrubro_id FOREIGN KEY (subrubro_id) REFERENCES SARTEN_QUE_LADRA.Subrubro (subrubro_id);
+
+-- FK -> ModeloXProducto
+ALTER TABLE SARTEN_QUE_LADRA.ModeloXProducto ADD CONSTRAINT fk_modeloproducto_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto (producto_id);
+ALTER TABLE SARTEN_QUE_LADRA.ModeloXProducto ADD CONSTRAINT fk_modeloproducto_modelo FOREIGN KEY (modelo_id) REFERENCES SARTEN_QUE_LADRA.Modelo (modelo_codigo);
 
 -- FK -> MarcaXProducto
 ALTER TABLE SARTEN_QUE_LADRA.MarcaXProducto ADD CONSTRAINT fk_marcaproducto_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto (producto_id);
@@ -248,10 +250,6 @@ ALTER TABLE SARTEN_QUE_LADRA.ProductoXSubrubro ADD CONSTRAINT fk_productosubrubr
 -- FK -> Localidad
 ALTER TABLE SARTEN_QUE_LADRA.Localidad ADD CONSTRAINT fk_localidad_provincia FOREIGN KEY (provincia_id) REFERENCES SARTEN_QUE_LADRA.Provincia (provincia_id);
 ALTER TABLE SARTEN_QUE_LADRA.Domicilio ADD CONSTRAINT fk_domicilio_localidad FOREIGN KEY (localidad_id) REFERENCES SARTEN_QUE_LADRA.Localidad (localidad_id);
-
--- FK -> ModeloXProducto
-ALTER TABLE SARTEN_QUE_LADRA.ModeloXProducto ADD CONSTRAINT fk_modeloproducto_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto (producto_id);
-ALTER TABLE SARTEN_QUE_LADRA.ModeloXProducto ADD CONSTRAINT fk_modeloproducto_modelo FOREIGN KEY (modelo_id) REFERENCES SARTEN_QUE_LADRA.Modelo (modelo_codigo);
 
 -- FK -> DomicilioXUsuario
 ALTER TABLE SARTEN_QUE_LADRA.DomicilioXUsuario ADD CONSTRAINT fk_domiciliousuario_usuario FOREIGN KEY (usuario_id) REFERENCES SARTEN_QUE_LADRA.Usuario (usuario_id);
@@ -284,8 +282,10 @@ ALTER TABLE SARTEN_QUE_LADRA.DetalleFactura ADD CONSTRAINT fk_detallefactura_fac
 
 -- FK -> DetalleVenta
 ALTER TABLE SARTEN_QUE_LADRA.DetalleVenta ADD CONSTRAINT fk_detalleventa_venta FOREIGN KEY (venta_codigo) REFERENCES SARTEN_QUE_LADRA.Venta;
-ALTER TABLE SARTEN_QUE_LADRA.DetalleVenta ADD CONSTRAINT fk_detalleventa_concepto FOREIGN KEY (detalle_concepto_id) REFERENCES SARTEN_QUE_LADRA.Concepto;
 ALTER TABLE SARTEN_QUE_LADRA.DetalleVenta ADD CONSTRAINT fk_detalleventa_publicacion FOREIGN KEY (publicacion_codigo) REFERENCES SARTEN_QUE_LADRA.Publicacion;
+
+-- FK -> Venta
+ALTER TABLE SARTEN_QUE_LADRA.Venta ADD CONSTRAINT fk_venta_cliente FOREIGN KEY (cliente_id) REFERENCES SARTEN_QUE_LADRA.Cliente;
 
 -- FK -> Pago
 ALTER TABLE SARTEN_QUE_LADRA.Pago ADD CONSTRAINT fk_pago_venta FOREIGN KEY (venta_codigo) REFERENCES SARTEN_QUE_LADRA.Venta;
@@ -487,18 +487,20 @@ AS BEGIN
 	WHERE VENTA_CODIGO IS NOT NULL
 END
 
+GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_ENVIO
 AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Envio(venta_codigo, envio_domicilio, envio_fecha_programada, envio_horario_inicio, envio_horario_fin, envio_costo, envio_fecha_hora_entrega, tipo_envio_id)
-	SELECT DISTINCT VENTA_CODIGO, d.domicilio_id, ENVIO_FECHA_PROGAMADA, ENVIO_HORA_INICIO, ENVIO_HORA_FIN_INICIO, ENVIO_COSTO, ENVIO_FECHA_ENTREGA, t.tipo_envio_id from gd_esquema.Maestra 
-	JOIN SARTEN_QUE_LADRA.Domicilio d ON 
-		CLI_USUARIO_DOMICILIO_CALLE = d.domicilio_calle AND
-		CLI_USUARIO_DOMICILIO_NRO_CALLE = d.domicilio_nro_calle AND
-		CLI_USUARIO_DOMICILIO_PISO = d.domicilio_piso AND
-		CLI_USUARIO_DOMICILIO_DEPTO = d.domicilio_depto AND
-		CLI_USUARIO_DOMICILIO_CP = d.domicilio_cp
-	JOIN SARTEN_QUE_LADRA.TipoEnvio t ON 
-	ENVIO_TIPO = t.envio_nombre;
+	INSERT INTO SARTEN_QUE_LADRA.Envio (venta_codigo, envio_domicilio, envio_fecha_programada, envio_horario_inicio, envio_horario_fin, 
+										envio_costo, envio_fecha_hora_entrega, tipo_envio_id)
+	SELECT DISTINCT VENTA_CODIGO, d.domicilio_id, ENVIO_FECHA_PROGAMADA, ENVIO_HORA_INICIO, ENVIO_HORA_FIN_INICIO, ENVIO_COSTO, ENVIO_FECHA_ENTREGA, t.tipo_envio_id 
+	FROM gd_esquema.Maestra JOIN SARTEN_QUE_LADRA.Domicilio d ON CLI_USUARIO_DOMICILIO_CALLE = d.domicilio_calle 
+								AND CLI_USUARIO_DOMICILIO_NRO_CALLE = d.domicilio_nro_calle 
+								AND CLI_USUARIO_DOMICILIO_PISO = d.domicilio_piso 
+								AND CLI_USUARIO_DOMICILIO_DEPTO = d.domicilio_depto 
+								AND CLI_USUARIO_DOMICILIO_CP = d.domicilio_cp
+							JOIN SARTEN_QUE_LADRA.Localidad l ON CLI_USUARIO_DOMICILIO_LOCALIDAD = l.localidad_nombre
+							JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_id = l.provincia_id
+							JOIN SARTEN_QUE_LADRA.TipoEnvio t ON ENVIO_TIPO = t.envio_nombre;
 END
 
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PUBLICACION
@@ -529,6 +531,7 @@ AS BEGIN
 	WHERE maestra.PUBLICACION_CODIGO IS NOT NULL AND maestra.FACTURA_NUMERO IS NOT NULL AND maestra.FACTURA_DET_TIPO IS NOT NULL
 END
 
+GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_DOMICILIOXUSUARIO
 AS BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.DomicilioXUsuario (usuario_id, domicilio_id)
@@ -556,7 +559,6 @@ AS BEGIN
 									JOIN SARTEN_QUE_LADRA.Localidad localidad ON localidad.localidad_id = domicilio.localidad_id
 									JOIN SARTEN_QUE_LADRA.Provincia provincia ON provincia.provincia_id = localidad.provincia_id
 	WHERE usuario_id IS NOT NULL AND domicilio_id IS NOT NULL
-	--41.387
 END
 
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_CONCEPTO
