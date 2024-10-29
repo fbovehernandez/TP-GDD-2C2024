@@ -1,0 +1,14 @@
+Documento estrategia GDD 
+
+Consideramos que un “MODELO” siempre tiene un producto asignado. 
+Tambien consideramos en funcion de lo visto en la tabla que un producto puede tener varios subrubros, y al mismo, tiempo, un subrubro puede tener muchos rubros
+
+Optamos por agregar el campo usuario_ID en la tabla Usuario que conecta Vendedor y Cliente ya que el usuario_nombre estaba repetido, y no encontramos otra opcion.
+
+Se agrego detalle venta ya que una venta tiene varias publicaciones, no estoy seguro de si la modalidad “Opcional” de publicacion hacia DetalleVenta, o si es obligatorio
+
+Se agrego envio_numero como identificador de la entidad envios, asi como el numero de pago en la entidad “Pago”
+
+Se modifico modalidad de Venta hacia envio, una venta TIENE que tener un envio
+
+Se agrego detalle de pago considerando la posibilidad del pago con 2 o mas tarjetas
