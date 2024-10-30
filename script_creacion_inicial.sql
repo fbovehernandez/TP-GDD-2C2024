@@ -720,6 +720,8 @@ AS BEGIN
 	WHERE m.VENTA_CODIGO IS NOT NULL -- No hacen falta mas CONSTRAINTS
 END
 
+GO
+	
 -- ============================== -- 
 --      EXEC PROCEDURES         --
 -- ============================== --
