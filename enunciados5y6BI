@@ -1,0 +1,212 @@
+-- 5. Volumen de ventas. Cantidad de ventas registradas por rango horario según el mes de cada año.
+-- 
+-- TIEMPO
+-- 
+CREATE TABLE SARTEN_QUE_LADRA.BI_TIEMPO
+(
+    id DECIMAL(18,0) PRIMARY KEY identity(1,1),
+    anio DECIMAL(18,0),
+    mes DECIMAL(18,0),
+    cuatrimestre DECIMAL(18,0),
+);
+
+GO
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_MIGRAR_TIEMPO
+AS
+BEGIN
+    INSERT INTO SARTEN_QUE_LADRA.BI_TIEMPO
+        (anio,mes,cuatrimestre)
+    SELECT DISTINCT YEAR(venta_fecha), MONTH(venta_fecha),
+        CASE WHEN MONTH(venta_fecha) BETWEEN 1 AND 4 THEN 1
+                 WHEN MONTH(venta_fecha) BETWEEN 5 AND 8 THEN 2
+                 WHEN MONTH(venta_fecha) BETWEEN 9 AND 12 THEN 3 END
+    FROM SARTEN_QUE_LADRA.Venta
+END
+
+GO
+CREATE FUNCTION SARTEN_QUE_LADRA.BI_SELECT_TIEMPO(@venta_fecha DATETIME)
+RETURNS DECIMAL(18,0)
+AS BEGIN
+    DECLARE @resultado DECIMAL(18,0)
+    SELECT @resultado = id
+    FROM SARTEN_QUE_LADRA.BI_TIEMPO t
+    WHERE t.anio=YEAR(@venta_fecha) AND t.mes=MONTH(@venta_fecha) AND t.cuatrimestre=
+CASE WHEN MONTH(@venta_fecha) BETWEEN 1 AND 4 THEN 1
+                 WHEN MONTH(@venta_fecha) BETWEEN 5 AND 8 THEN 2
+                 WHEN MONTH(@venta_fecha) BETWEEN 9 AND 12 THEN 3 END
+    RETURN @resultado
+END
+
+--
+-- RANGO HORARIO
+--
+CREATE TABLE SARTEN_QUE_LADRA.BI_RANGO_HORARIO
+(
+    id DECIMAL(18,0) PRIMARY KEY identity(1,1),
+    rango VARCHAR(20)
+);
+
+GO
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_MIGRAR_RANGO_HORARIO
+AS
+BEGIN
+    INSERT INTO SARTEN_QUE_LADRA.BI_RANGO_HORARIO
+        (rango)
+    VALUES
+        ('00:00 - 06:00')
+    INSERT INTO SARTEN_QUE_LADRA.BI_RANGO_HORARIO
+        (rango)
+    VALUES
+        ('06:00 - 12:00')
+    INSERT INTO SARTEN_QUE_LADRA.BI_RANGO_HORARIO
+        (rango)
+    VALUES
+        ('12:00 - 18:00')
+    INSERT INTO SARTEN_QUE_LADRA.BI_RANGO_HORARIO
+        (rango)
+    VALUES
+        ('18:00 - 24:00')
+END
+
+GO
+CREATE FUNCTION SARTEN_QUE_LADRA.BI_SELECT_RANGO_HORARIO(@venta_hora DATETIME)
+RETURNS DECIMAL(18,0)
+AS BEGIN
+    DECLARE @resultado DECIMAL(18,0)
+    DECLARE @hora DATETIME;
+    SET @hora = CONVERT(TIME, @venta_hora);
+    SELECT @resultado = id
+    FROM SARTEN_QUE_LADRA.BI_RANGO_HORARIO
+    WHERE rango LIKE (CASE 
+                            WHEN @hora BETWEEN '00:00' AND '06:00' THEN  '00:00 - 06:00'
+                            WHEN @hora BETWEEN '06:00' AND '12:00' THEN  '06:00 - 12:00'
+                            WHEN @hora BETWEEN '12:00' AND '18:00' THEN  '12:00 - 18:00'
+                            WHEN @hora BETWEEN '18:00' AND '24:00' THEN '18:00 - 24:00'
+							END)
+    RETURN @resultado
+END
+
+CREATE TABLE SARTEN_QUE_LADRA.BI_HECHOS_VOLUMEN_VENTA
+(
+    venta_codigo DECIMAL(18,0) PRIMARY KEY identity(1,1),
+    tiempo_id DECIMAL(18,0),
+    rango_id DECIMAL(18,0),
+    FOREIGN KEY (rango_id) REFERENCES SARTEN_QUE_LADRA.BI_RANGO_HORARIO(id),
+    FOREIGN KEY (tiempo_id) REFERENCES SARTEN_QUE_LADRA.BI_TIEMPO(id)
+);
+
+GO
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_MIGRAR_HECHOS_VOLUMEN_VENTA
+AS
+BEGIN
+    WITH temp_table AS (
+    SELECT 
+        v.venta_codigo,
+        v.venta_fecha,
+        v.venta_hora
+    FROM SARTEN_QUE_LADRA.Venta v
+)
+    INSERT INTO SARTEN_QUE_LADRA.BI_HECHOS_VOLUMEN_VENTA
+        (
+        venta_codigo,
+        tiempo_id,
+        rango_id
+        )
+SELECT DISTINCT 
+	tt.venta_codigo,
+    SARTEN_QUE_LADRA.BI_SELECT_TIEMPO(tt.venta_fecha),
+	SARTEN_QUE_LADRA.BI_SELECT_RANGO_HORARIO(tt.venta_hora)
+FROM temp_table tt
+GROUP BY 
+    tt.venta_codigo,
+    SARTEN_QUE_LADRA.BI_SELECT_TIEMPO(tt.venta_fecha),
+	SARTEN_QUE_LADRA.BI_SELECT_RANGO_HORARIO(tt.venta_hora)
+END
+
+-- 6. Pago en Cuotas. Las 3 localidades con el mayor importe de pagos en cuotas,
+-- según el medio de pago, mes y año. Se calcula sumando los importes totales de
+-- todas las ventas en cuotas. Se toma la localidad del cliente (Si tiene más de una
+-- dirección se toma a la que seleccionó el envío
+
+GO
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_MIGRAR_LOCALIDAD_X_CLIENTE_X_VENTA
+AS
+BEGIN
+INSERT INTO SARTEN_QUE_LADRA.BI_LOCALIDAD_X_CLIENTE_X_VENTA
+        (
+        cliente_id,
+		localidad_id,
+		id_medio_de_pago,
+		id_tiempo,
+		venta_codigo,
+		monto
+        )
+    SELECT 
+		c.cliente_id,
+		l.localidad_id,
+		mp.id_medio_de_pago,
+		SARTEN_QUE_LADRA.BI_SELECT_TIEMPO(v.venta_fecha),
+		v.venta_codigo,
+       	SUM(dp.detalle_pago_cuotas)
+	FROM SARTEN_QUE_LADRA.Cliente c
+	JOIN SARTEN_QUE_LADRA.Venta v ON v.cliente_id = c.cliente_id
+	JOIN SARTEN_QUE_LADRA.Usuario u ON u.usuario_id = c.usuario_id
+	JOIN SARTEN_QUE_LADRA.DomicilioXUsuario dxu ON u.usuario_id = dxu.usuario_id
+	JOIN SARTEN_QUE_LADRA.Domicilio d ON dxu.domicilio_id = d.domicilio_id
+	JOIN SARTEN_QUE_LADRA.Localidad l ON l.localidad_id = d.localidad_id
+    JOIN SARTEN_QUE_LADRA.Pago p ON v.venta_codigo = p.venta_codigo
+	JOIN SARTEN_QUE_LADRA.MedioXPago mp ON p.id_pago = mp.id_pago
+	JOIN SARTEN_QUE_LADRA.DetallePago dp ON dp.detalle_pago_id = mp.id_detalle_pago
+GROUP BY 
+		c.cliente_id,
+		l.localidad_id,
+		mp.id_medio_de_pago,
+		SARTEN_QUE_LADRA.BI_SELECT_TIEMPO(v.venta_fecha),
+		v.venta_codigo
+END
+
+CREATE TABLE LOCALIDADES_IMPORTE_TOTAL (
+	localidad_id DECIMAL(18,0) PRIMARY KEY,
+	FOREIGN KEY (localidad_id) REFERENCES SARTEN_QUE_LADRA.Localidad(localidad_id),
+	monto_total DECIMAL(18,0)
+)
+
+CREATE PROCEDURE BI_MONTO_POR_LOCALIDAD AS
+BEGIN TRANSACTION
+BEGIN TRY
+
+	DECLARE @localidad_id DECIMAL(18,0), @monto DECIMAL(18,0)
+
+	DECLARE localidad_cursor CURSOR FOR 
+	SELECT cliente_id,
+		localidad_id,
+		id_medio_de_pago,
+		id_tiempo,
+		venta_codigo,
+		monto FROM SARTEN_QUE_LADRA.BI_LOCALIDAD_X_CLIENTE_X_VENTA
+
+	OPEN localidad_cursor
+	FETCH NEXT FROM localidad_cursor INTO @localidad_id, @monto
+
+	WHILE @@FETCH_STATUS = 0
+	BEGIN
+		INSERT INTO LOCALIDADES_IMPORTE_TOTAL (localidad_id, monto_total) 
+		SELECT @localidad_id, SUM(@monto) FROM SARTEN_QUE_LADRA.BI_LOCALIDAD_X_CLIENTE_X_VENTA WHERE localidad_id = @localidad_id
+		
+		FETCH NEXT FROM localidad_cursor INTO @localidad_id, @monto
+	END 
+	CLOSE localidad_cursor
+	DEALLOCATE localidad_cursor
+
+	COMMIT TRANSACTION
+END TRY 
+
+BEGIN CATCH
+	ROLLBACK TRANSACTION
+	DECLARE @errorDescription NVARCHAR(4000);
+    SET @errorDescription = ERROR_MESSAGE(); 
+    THROW;
+END CATCH
+
+SELECT TOP 3 localidad_id, monto FROM SARTEN_QUE_LADRA.LOCALIDADES_IMPORTE_TOTAL
+ORDER BY monto DESC
