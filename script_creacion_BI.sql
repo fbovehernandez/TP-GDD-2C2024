@@ -455,3 +455,20 @@ AS BEGIN
 		JOIN SARTEN_QUE_LADRA.BI_VentaXRubro vxr ON vxr.venta_id = v.venta_codigo
 		JOIN SARTEN_QUE_LADRA.Cliente c ON c.cliente_id = v.cliente_id
 END
+
+
+-- ============================== -- 
+--				EXEC	          --
+-- ============================== --
+
+-- EN ESTE ORDEN FUNCIONA
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Tiempo;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Provincia;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Localidad;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Medio_De_Pago;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Tipo_Medio_De_Pago;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Pago;
+
+-- ============================== -- 
+--				VIEWS	          --
+-- ============================== --
