@@ -44,7 +44,7 @@ CREATE TABLE SARTEN_QUE_LADRA.BI_Tiempo (
 --         CONSTRAINTS            --
 -- ============================== --
 
-ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT fk_hechos_pago_localidad FOREIGN KEY (localidad_id) REFERENCES SARTEN_QUE_LADRA.BI_Localidad;
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT fk_hechos_pago_localidad FOREIGN KEY (localidad_cliente_id) REFERENCES SARTEN_QUE_LADRA.BI_Localidad;
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT fk_hechos_pago_tiempo FOREIGN KEY (tiempo_id) REFERENCES SARTEN_QUE_LADRA.BI_Tiempo;
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT fk_hechos_pago_medio_pago FOREIGN KEY (medio_pago_id) REFERENCES SARTEN_QUE_LADRA.BI_Medio_De_Pago;
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT fk_hechos_pago_tipo_medio_pago FOREIGN KEY (tipo_medio_pago_id) REFERENCES SARTEN_QUE_LADRA.BI_Tipo_Medio_De_Pago;
@@ -57,93 +57,51 @@ ALTER TABLE SARTEN_QUE_LADRA.BI_Localidad ADD CONSTRAINT fk_bilocalidad_provinci
 
 GO
 
-/*
-WITH DatosEnvio AS (
-  SELECT 
-    SARTEN_QUE_LADRA.SELECT_TIEMPO(e.envio_fecha_hora_entrega) AS tiempo_id,
-    SARTEN_QUE_LADRA.SELECT_LOCALIDAD_CLIENTE_POR_CLIENTE(l.localidad_id, @id_cliente) AS localidad_id,
-    SARTEN_QUE_LADRA.SELECT_PROVINCIA_ALMACEN(p.provincia_id) AS provincia_id,
-    SUM(SARTEN_QUE_LADRA.ENVIADOS_A_TIEMPO) AS enviados_a_tiempo,
-    COUNT(envio_numero) AS total_envios
-  -- Resto de la consulta
-)
-SELECT
-  de.tiempo_id,
-  de.localidad_id,
-  p.provincia_id,
-  COALESCE(de.e
-nviados_a_tiempo, 100) AS enviados_a_tiempo,
-  COALESCE(de.total_envios, 0) AS total_envios
-FROM DatosEnvio de
-RIGHT JOIN SARTEN_QUE_LADRA.Provincia p ON de.provincia_id = p.provincia_id
-WHERE p.tipo_provincia = 'ALMACEN';
-
------------------------------------------------------------------------------------
-
-WITH Cliente_Localidades AS (
-		SELECT COUNT(DISTINCT l.localidad_id) as cantidad, c.cliente_id, l.localidad_id
-		FROM SARTEN_QUE_LADRA.Cliente c
-			 JOIN SARTEN_QUE_LADRA.Usuario u ON u.usuario_id = c.usuario_id
-             JOIN SARTEN_QUE_LADRA.DomicilioXUsuario dxu ON dxu.usuario_id = u.usuario_id
-             JOIN SARTEN_QUE_LADRA.Domicilio d ON dxu.domicilio_id = d.domicilio_id 
-             JOIN SARTEN_QUE_LADRA.Localidad l ON l.localidad_id = d.localidad_id
-		WHERE c.cliente_id = @clien
-te_id
-		RETURN l.localidad_id		
-	ELSE
-		RETURN (SELECT cl.localidad_id FROM Cliente_Localidades cl)
-*/
-
-GO
-
-
--- NO RESUELVE EL PROBLEMA DE DOS O MAS LOCALIDADES POR PERSONA, PARA NINGÚN CASO. ESTÁ EN PROCESO
-CREATE FUNCTION SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente(@cliente_id DECIMAL(18,0))
+CREATE FUNCTION SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente_Segun_Cantidad_De_Domicilios(@cliente_id DECIMAL(18,0), @envio_id DECIMAL(18,0))
 RETURNS DECIMAL(18,0)
 AS BEGIN
     DECLARE @resultado DECIMAL(18,0)
-	SELECT DISTINCT @resultado = domicilio.localidad_id
-	FROM SARTEN_QUE_LADRA.Domicilio domicilio JOIN SARTEN_QUE_LADRA.DomicilioXUsuario domicilioxusuario ON domicilio.domicilio_id = domicilioxusuario.domicilio_id
-										JOIN SARTEN_QUE_LADRA.Cliente cliente ON domicilioxusuario.usuario_id = cliente.usuario_id
-	WHERE cliente.cliente_id = @cliente_id
+
+	IF SARTEN_QUE_LADRA.BI_Cantidad_De_Domicilios(@cliente_id) = 1
+		SET @resultado = SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente(@cliente_id)
+	ELSE
+		SELECT @resultado = localidad_id
+		FROM SARTEN_QUE_LADRA.Envio envio JOIN SARTEN_QUE_LADRA.Domicilio domicilio ON envio.envio_domicilio = domicilio.domicilio_id
+		WHERE envio.envio_numero = @envio_id
+
     RETURN @resultado
 END
 
 GO
 
-SELECT SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente(cliente_id)
-FROM SARTEN_QUE_LADRA.Cliente
-WHERE cliente_id = 14071;
+CREATE FUNCTION SARTEN_QUE_LADRA.BI_Cantidad_De_Domicilios (@cliente_id DECIMAL(18,0))
+RETURNS BIGINT
+AS BEGIN
+	DECLARE @resultado BIGINT
+
+	SELECT @resultado = COUNT(DISTINCT domicilio.localidad_id) 
+	FROM SARTEN_QUE_LADRA.Domicilio domicilio JOIN SARTEN_QUE_LADRA.DomicilioXUsuario domicilioxusuario ON domicilio.domicilio_id = domicilioxusuario.domicilio_id
+										JOIN SARTEN_QUE_LADRA.Cliente cliente ON domicilioxusuario.usuario_id = cliente.usuario_id
+	WHERE cliente.cliente_id = @cliente_id
+	GROUP BY cliente.cliente_id
+
+	RETURN @resultado
+END
 
 GO
--------------------------------------------------------------------------------------------------------------------
 
-SELECT DISTINCT cliente_id, domicilio.localidad_id
-FROM SARTEN_QUE_LADRA.Domicilio domicilio JOIN SARTEN_QUE_LADRA.DomicilioXUsuario domicilioxusuario ON domicilio.domicilio_id = domicilioxusuario.domicilio_id
+CREATE FUNCTION SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente(@cliente_id DECIMAL(18,0))
+RETURNS DECIMAL(18,0)
+AS BEGIN
+    DECLARE @resultado DECIMAL(18,0)
+
+	SELECT DISTINCT @resultado = domicilio.localidad_id
+	FROM SARTEN_QUE_LADRA.Domicilio domicilio JOIN SARTEN_QUE_LADRA.DomicilioXUsuario domicilioxusuario ON domicilio.domicilio_id = domicilioxusuario.domicilio_id
 										JOIN SARTEN_QUE_LADRA.Cliente cliente ON domicilioxusuario.usuario_id = cliente.usuario_id
-WHERE cliente_id = 14071;
+	WHERE cliente.cliente_id = @cliente_id
 
-SELECT DISTINCT cliente_id, COUNT(domicilio.localidad_id)
-FROM SARTEN_QUE_LADRA.Domicilio domicilio JOIN SARTEN_QUE_LADRA.DomicilioXUsuario domicilioxusuario ON domicilio.domicilio_id = domicilioxusuario.domicilio_id
-										JOIN SARTEN_QUE_LADRA.Cliente cliente ON domicilioxusuario.usuario_id = cliente.usuario_id
-GROUP BY cliente_id
-HAVING COUNT(domicilio.localidad_id) > 1;
-
-
--------- vamos a ver el cliente 14071
-SELECT cliente_id, usuario_id
-FROM SARTEN_QUE_LADRA.Cliente
-WHERE cliente_id = 14071;
-
-SELECT usuario_id, domicilio_id
-FROM SARTEN_QUE_LADRA.DomicilioXUsuario
-WHERE usuario_id = 14058;
-
-SELECT domicilio_id, localidad_id
-FROM SARTEN_QUE_LADRA.Domicilio
-WHERE domicilio_id = 14632 OR domicilio_id = 18991; --localidades 4256 y 4157
-
--------------------------------------------------------------------------------------------------
+    RETURN @resultado
+END
 
 GO
 
@@ -152,7 +110,7 @@ RETURNS DECIMAL(18,0)
 AS BEGIN
     DECLARE @resultado DECIMAL(18,0)
     SELECT @resultado = tiempo_id
-    FROM SARTEN_QUE_LADRA.BI_TIEMPO t
+    FROM SARTEN_QUE_LADRA.BI_Tiempo t
     WHERE t.anio=YEAR(@fecha) AND t.mes=MONTH(@fecha) AND t.cuatrimestre=
 CASE WHEN MONTH(@fecha) BETWEEN 1 AND 4 THEN 1
                  WHEN MONTH(@fecha) BETWEEN 5 AND 8 THEN 2
@@ -240,21 +198,123 @@ AS BEGIN
 		medio_pago_id,
 		venta_id,
 		tipo_medio_pago_id)
-	SELECT DISTINCT pago.id_pago, SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente(venta.cliente_id), detallepago.detalle_pago_cuotas, SARTEN_QUE_LADRA.BI_Select_Tiempo(pago.pago_fecha), medioxpago.id_medio_de_pago, pago.venta_codigo, tipomediopago.id_medio_pago
+	SELECT DISTINCT pago.id_pago, SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente_Segun_Cantidad_De_Domicilios(venta.cliente_id, envio.envio_numero), detallepago.detalle_pago_cuotas, SARTEN_QUE_LADRA.BI_Select_Tiempo(pago.pago_fecha), medioxpago.id_medio_de_pago, pago.venta_codigo, tipomediopago.id_medio_pago
 	FROM SARTEN_QUE_LADRA.Pago pago JOIN SARTEN_QUE_LADRA.Venta venta ON pago.venta_codigo = venta.venta_codigo
 									JOIN SARTEN_QUE_LADRA.MedioXPago medioxpago ON pago.id_pago = medioxpago.id_pago
 									JOIN SARTEN_QUE_LADRA.DetallePago detallepago ON medioxpago.id_detalle_pago = detallepago.detalle_pago_id
 									JOIN SARTEN_QUE_LADRA.MedioPago mediopago ON medioxpago.id_medio_de_pago = mediopago.id_medio_de_pago
 									JOIN SARTEN_QUE_LADRA.TipoMedioPago tipomediopago ON mediopago.tipo_medio_pago = tipomediopago.id_medio_pago
+									JOIN SARTEN_QUE_LADRA.Envio envio ON pago.venta_codigo = envio.venta_codigo
 END
+
+GO
 
 -- ============================== -- 
 --				EXEC	          --
 -- ============================== --
 
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Tiempo;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Provincia;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Localidad;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Medio_De_Pago;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Tipo_Medio_De_Pago;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Pago;
 
 -- ============================== -- 
 --				VIEWS	          --
 -- ============================== --
+
+
+-- ============================== -- 
+--				TESTING	          --
+-- ============================== --
+
+SELECT *
+FROM SARTEN_QUE_LADRA.Envio
+WHERE envio_numero = 12990; --Envio Domicilio 14632
+
+SELECT *
+FROM SARTEN_QUE_LADRA.Envio
+WHERE envio_numero = 40138; --Envio Domicilio 14632
+
+SELECT * FROM SARTEN_QUE_LADRA.Domicilio
+WHERE domicilio_id = 14632;
+
+GO
+-------------------------------------------------------------------------------------------------------------------
+
+SELECT DISTINCT cliente_id, domicilio.localidad_id
+FROM SARTEN_QUE_LADRA.Domicilio domicilio JOIN SARTEN_QUE_LADRA.DomicilioXUsuario domicilioxusuario ON domicilio.domicilio_id = domicilioxusuario.domicilio_id
+										JOIN SARTEN_QUE_LADRA.Cliente cliente ON domicilioxusuario.usuario_id = cliente.usuario_id
+WHERE cliente_id = 14071;
+
+SELECT DISTINCT cliente_id, COUNT(domicilio.localidad_id)
+FROM SARTEN_QUE_LADRA.Domicilio domicilio JOIN SARTEN_QUE_LADRA.DomicilioXUsuario domicilioxusuario ON domicilio.domicilio_id = domicilioxusuario.domicilio_id
+										JOIN SARTEN_QUE_LADRA.Cliente cliente ON domicilioxusuario.usuario_id = cliente.usuario_id
+GROUP BY cliente_id
+HAVING COUNT(domicilio.localidad_id) = 1;
+
+
+-------- vamos a ver el cliente 14071 (multiple)
+SELECT cliente_id, usuario_id
+FROM SARTEN_QUE_LADRA.Cliente
+WHERE cliente_id = 14071;
+
+SELECT usuario_id, domicilio_id
+FROM SARTEN_QUE_LADRA.DomicilioXUsuario
+WHERE usuario_id = 14058;
+
+SELECT domicilio_id, localidad_id
+FROM SARTEN_QUE_LADRA.Domicilio
+WHERE domicilio_id = 14632 OR domicilio_id = 18991; --localidades 4256 y 4157
+
+SELECT SARTEN_QUE_LADRA.BI_Cantidad_De_Domicilios(cliente_id)
+FROM SARTEN_QUE_LADRA.Cliente
+WHERE cliente_id = 14071;
+
+SELECT SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente(cliente_id)
+FROM SARTEN_QUE_LADRA.Cliente
+WHERE cliente_id = 14071;
+
+SELECT TOP 1 cliente_id, envio.envio_numero, SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente_Segun_Cantidad_De_Domicilios(cliente_id, envio.envio_numero)
+FROM SARTEN_QUE_LADRA.Envio envio JOIN SARTEN_QUE_LADRA.Venta venta ON envio.venta_codigo = venta.venta_codigo
+WHERE cliente_id = 14071; --16359
+
+-------- vamos a ver el cliente 12565 (unico)
+SELECT cliente_id, usuario_id
+FROM SARTEN_QUE_LADRA.Cliente
+WHERE cliente_id = 12565;
+
+SELECT usuario_id, domicilio_id
+FROM SARTEN_QUE_LADRA.DomicilioXUsuario
+WHERE usuario_id = 12555;
+
+SELECT domicilio_id, localidad_id
+FROM SARTEN_QUE_LADRA.Domicilio
+WHERE domicilio_id = 27848;--localidad 12273
+
+SELECT SARTEN_QUE_LADRA.BI_Cantidad_De_Domicilios(cliente_id)
+FROM SARTEN_QUE_LADRA.Cliente
+WHERE cliente_id = 12565;
+
+SELECT SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente(cliente_id)
+FROM SARTEN_QUE_LADRA.Cliente
+WHERE cliente_id = 12565;
+
+SELECT DISTINCT cliente_id, envio.envio_numero, SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente_Segun_Cantidad_De_Domicilios(cliente_id, envio.envio_numero)
+FROM SARTEN_QUE_LADRA.Envio envio JOIN SARTEN_QUE_LADRA.Venta venta ON envio.venta_codigo = venta.venta_codigo
+WHERE cliente_id = 12565; --16359
+
+-------------------------------------------------------------------------------------------------
+
+SELECT * FROM SARTEN_QUE_LADRA.Hechos_Pago WHERE pago_id = 94233;
+-- BI_Pago: 94233 5562 12 2 5 130857 2
+SELECT * FROM SARTEN_QUE_LADRA.Pago WHERE id_pago = 94233;
+SELECT * FROM SARTEN_QUE_LADRA.Venta WHERE venta_codigo = 130857; --BIEN
+SELECT * FROM SARTEN_QUE_LADRA.Envio WHERE venta_codigo = 130857;
+SELECT SARTEN_QUE_LADRA.BI_Cantidad_De_Domicilios(cliente_id) FROM SARTEN_QUE_LADRA.Cliente WHERE cliente_id = 22681;
+SELECT SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente_Segun_Cantidad_De_Domicilios(22681, 7392); --BIEN
+SELECT * FROM SARTEN_QUE_LADRA.MedioXPago WHERE id_pago = 94233; --BIEN
+SELECT * FROM SARTEN_QUE_LADRA.DetallePago WHERE detalle_pago_id = 22196; --BIEN
+SELECT * FROM SARTEN_QUE_LADRA.BI_Tiempo WHERE tiempo_id = 2; --BIEN
+SELECT * FROM SARTEN_QUE_LADRA.MedioPago WHERE id_medio_de_pago = 5; --BIEN
