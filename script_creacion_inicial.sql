@@ -1,6 +1,6 @@
 USE GD2C2024
 GO
-CREATE SCHEMA SARTEN_QUE_LADRA
+--CREATE SCHEMA SARTEN_QUE_LADRA
 GO
 
 -- ============================== --
@@ -174,9 +174,7 @@ CREATE TABLE SARTEN_QUE_LADRA.DetalleFactura (
 	detalle_factura_id DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	publicacion_codigo DECIMAL(18,0),
 	detalle_concepto_id DECIMAL(18,0),
-	detalle_factura_total DECIMAL(18,2),
 	factura_numero DECIMAL(18,0),
-	detalle_factura_tipo NVARCHAR(50),
 	detalle_factura_precio DECIMAL(18,2),
 	detalle_factura_cantidad DECIMAL(18,0),
 	detalle_factura_subtotal DECIMAL(18,2)
@@ -548,8 +546,8 @@ GO
 GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_DETALLE_FACTURA
 AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.DetalleFactura (publicacion_codigo, detalle_concepto_id, detalle_factura_total, factura_numero, detalle_factura_tipo, detalle_factura_precio, detalle_factura_cantidad, detalle_factura_subtotal)
-	SELECT DISTINCT maestra.PUBLICACION_CODIGO, concepto.detalle_concepto_id, FACTURA_DET_PRECIO * FACTURA_DET_CANTIDAD, maestra.FACTURA_NUMERO, maestra.FACTURA_DET_TIPO, FACTURA_DET_PRECIO, FACTURA_DET_CANTIDAD, FACTURA_DET_SUBTOTAL
+	INSERT INTO SARTEN_QUE_LADRA.DetalleFactura (publicacion_codigo, detalle_concepto_id, factura_numero, detalle_factura_precio, detalle_factura_cantidad, detalle_factura_subtotal)
+	SELECT DISTINCT maestra.PUBLICACION_CODIGO, concepto.detalle_concepto_id, maestra.FACTURA_NUMERO, FACTURA_DET_PRECIO, FACTURA_DET_CANTIDAD, FACTURA_DET_SUBTOTAL
 	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Publicacion p ON p.publicacion_codigo = maestra.PUBLICACION_CODIGO	
 	JOIN SARTEN_QUE_LADRA.Concepto concepto on maestra.FACTURA_DET_TIPO = concepto_tipo
 	WHERE maestra.PUBLICACION_CODIGO IS NOT NULL AND maestra.FACTURA_NUMERO IS NOT NULL AND maestra.FACTURA_DET_TIPO IS NOT NULL
