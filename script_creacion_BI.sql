@@ -78,19 +78,15 @@ CREATE TABLE SARTEN_QUE_LADRA.BI_Rango_Etario (
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.Hechos_Venta (
-	venta_id DECIMAL(18,0) PRIMARY KEY,
+	venta_id DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
+	venta_codigo DECIMAL(18,0),
 	provincia_almacen_id DECIMAL(18,0),
 	tiempo_id DECIMAL(18,0),
 	rubro_id DECIMAL(18,0),
 	localidad_cliente_id DECIMAL(18,0),
 	rango_etario_cliente  DECIMAL(18,0),
-	rango_horario_id  DECIMAL(18,0)
-);
-
-CREATE TABLE SARTEN_QUE_LADRA.BI_VentaXRubro (
-	venta_id DECIMAL(18,0),
-	rubro_id DECIMAL(18,0),
-	PRIMARY KEY (venta_id, rubro_id)  
+	rango_horario_id  DECIMAL(18,0),
+	venta_total DECIMAL(18,2)
 );
 
 -- ============================== --
@@ -104,7 +100,6 @@ ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT fk_hechos_pago_medio_pag
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT fk_hechos_pago_tipo_medio_pago FOREIGN KEY (tipo_medio_pago_id) REFERENCES SARTEN_QUE_LADRA.BI_Tipo_Medio_De_Pago;
 
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Publicacion ADD CONSTRAINT fk_hechos_publicacion_subrubro FOREIGN KEY (publicacion_subrubro_id) REFERENCES SARTEN_QUE_LADRA.BI_Subrubro(subrubro_id);
--- ALTER TABLE SARTEN_QUE_LADRA.Hechos_Publicacion ADD CONSTRAINT fk_hechos_publicacion_tiempo FOREIGN KEY (tiempo_publicada_id) REFERENCES SARTEN_QUE_LADRA.BI_Tiempo(tiempo_id);
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Publicacion ADD CONSTRAINT fk_hechos_publicacion_marca FOREIGN KEY (marca_id) REFERENCES SARTEN_QUE_LADRA.BI_Marca;
 
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_provincia FOREIGN KEY (provincia_almacen_id) REFERENCES SARTEN_QUE_LADRA.BI_Provincia(provincia_id);
@@ -112,9 +107,6 @@ ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_rango_e
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_tiempo FOREIGN KEY (tiempo_id) REFERENCES SARTEN_QUE_LADRA.BI_Tiempo(tiempo_id);
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_rubro FOREIGN KEY (rubro_id) REFERENCES SARTEN_QUE_LADRA.BI_Rubro(rubro_id);
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_localidad FOREIGN KEY (localidad_cliente_id) REFERENCES SARTEN_QUE_LADRA.BI_Localidad(localidad_id);
-
-ALTER TABLE SARTEN_QUE_LADRA.BI_VentaXRubro ADD CONSTRAINT fk_biventaxrubro_venta FOREIGN KEY (venta_id) REFERENCES SARTEN_QUE_LADRA.Hechos_Venta;
-ALTER TABLE SARTEN_QUE_LADRA.BI_VentaXRubro ADD CONSTRAINT fk_biventaxrubro_rubro FOREIGN KEY (rubro_id) REFERENCES SARTEN_QUE_LADRA.Hechos_Rubro;
 
 -- ============================== -- 
 --			FUNCTIONS	          --
@@ -195,7 +187,7 @@ AS BEGIN
     SELECT @resultado = rango_horario_id
     FROM SARTEN_QUE_LADRA.BI_RANGO_HORARIO
     WHERE rango_horario LIKE (CASE 
-                            WHEN @hora BETWEEN '00:00' AND '06:00' THEN  '00:00 - 06:00'
+                            WHEN @hora BETWEEN '00:00' AND '06:00' OR @hora IS NULL THEN  '00:00 - 06:00'
                             WHEN @hora BETWEEN '06:00' AND '12:00' THEN  '06:00 - 12:00'
                             WHEN @hora BETWEEN '12:00' AND '18:00' THEN  '12:00 - 18:00'
                             WHEN @hora BETWEEN '18:00' AND '24:00' THEN '18:00 - 24:00'
@@ -343,7 +335,7 @@ END
 
 GO
 
-CREATE PROCEDURE SARTEN_QUE_LADRA.BI_MIGRAR_BI_Marca
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Marca
 AS
 BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.BI_Marca (marca_id, marca_nombre)
@@ -353,7 +345,7 @@ END
 
 GO
 
-CREATE PROCEDURE SARTEN_QUE_LADRA.BI_MIGRAR_BI_Subrubro
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Subrubro
 AS
 BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.BI_Subrubro (subrubro_id, subrubro_rubro)
@@ -398,21 +390,6 @@ END
 
 GO
 
-CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_VentaXRubro
-AS BEGIN
-    INSERT INTO SARTEN_QUE_LADRA.BI_VentaXRubro 
-		SELECT DISTINCT v.venta_codigo, r.rubro_id FROM SARTEN_QUE_LADRA.Venta v
-		JOIN SARTEN_QUE_LADRA.DetalleVenta dv ON dv.venta_codigo = v.venta_codigo
-		JOIN SARTEN_QUE_LADRA.Publicacion p ON p.publicacion_codigo = dv.publicacion_codigo
-		JOIN SARTEN_QUE_LADRA.Producto pr ON pr.producto_id = p.producto_id 
-		JOIN SARTEN_QUE_LADRA.ProductoXSubrubro pxs ON pxs.producto_id = pr.producto_id
-		JOIN SARTEN_QUE_LADRA.Subrubro s ON s.subrubro_id = pxs.subrubro_id
-		JOIN SARTEN_QUE_LADRA.SubrubroXRubro sxr ON sxr.subrubro_id = s.subrubro_id
-		JOIN SARTEN_QUE_LADRA.Rubro r ON r.rubro_id = sxr.rubro_id
-END
-
-GO
-
 CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Rubro
 AS BEGIN
     INSERT INTO SARTEN_QUE_LADRA.BI_Rubro
@@ -447,15 +424,19 @@ GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Venta
 AS BEGIN
     INSERT INTO SARTEN_QUE_LADRA.Hechos_Venta
-        (venta_id, provincia_almacen_id, tiempo_id, rubro_id, localidad_cliente_id,	rango_etario_cliente, rango_horario_id)
-    SELECT DISTINCT v.venta_codigo, SARTEN_QUE_LADRA.BI_Select_Provincia_Almacen(SARTEN_QUE_LADRA.BI_Select_Almacen_Venta(venta_codigo)), 
-		SARTEN_QUE_LADRA.BI_Select_Tiempo(v.venta_fecha), vxr.rubro_id, SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente(v.cliente_id), 
-		SARTEN_QUE_LADRA.BI_Select_Rango_Etario(c.cliente_fecha_nac), SARTEN_QUE_LADRA.BI_Select_Rango_Horario(v.venta_hora)
-	FROM Venta v
-		JOIN SARTEN_QUE_LADRA.BI_VentaXRubro vxr ON vxr.venta_id = v.venta_codigo
+        (venta_codigo, provincia_almacen_id, tiempo_id, rubro_id, localidad_cliente_id,	rango_etario_cliente, rango_horario_id, venta_total)
+    SELECT DISTINCT v.venta_codigo, SARTEN_QUE_LADRA.BI_Select_Provincia_Almacen(SARTEN_QUE_LADRA.BI_Select_Almacen_Venta(v.venta_codigo)), 
+		SARTEN_QUE_LADRA.BI_Select_Tiempo(v.venta_fecha), rubro_id, SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente(v.cliente_id), 
+		SARTEN_QUE_LADRA.BI_Select_Rango_Etario(c.cliente_fecha_nac), SARTEN_QUE_LADRA.BI_Select_Rango_Horario(v.venta_hora), v.venta_total
+	FROM SARTEN_QUE_LADRA.Venta v
+		JOIN SARTEN_QUE_LADRA.DetalleVenta dv ON v.venta_codigo = dv.venta_codigo
+		JOIN SARTEN_QUE_LADRA.Publicacion publicacion ON publicacion.publicacion_codigo = dv.publicacion_codigo
+		JOIN SARTEN_QUE_LADRA.Producto producto ON producto.producto_id = publicacion.producto_id
+		JOIN SARTEN_QUE_LADRA.ProductoXSubrubro pxs ON pxs.producto_id = producto.producto_id
+		JOIN SARTEN_QUE_LADRA.Subrubro subrubro ON subrubro.subrubro_id = pxs.subrubro_id
+		JOIN SARTEN_QUE_LADRA.SubrubroXRubro sxr ON sxr.subrubro_id = subrubro.subrubro_id
 		JOIN SARTEN_QUE_LADRA.Cliente c ON c.cliente_id = v.cliente_id
 END
-
 
 -- ============================== -- 
 --				EXEC	          --
@@ -468,7 +449,48 @@ EXEC SARTEN_QUE_LADRA.BI_Migrar_Localidad;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Medio_De_Pago;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Tipo_Medio_De_Pago;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Pago;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Rubro;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Rango_Etario;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Rango_Horario;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Venta;
 
 -- ============================== -- 
 --				VIEWS	          --
 -- ============================== --
+
+/*
+3. Venta promedio mensual. Valor promedio de las ventas (en $) según la
+provincia correspondiente a la ubicación del almacén para cada mes de cada año
+Se calcula en función de la sumatoria del importe de las ventas sobre el total de
+las mismas.
+
+TODO: Que funcione.
+*/
+GO
+
+CREATE VIEW SARTEN_QUE_LADRA.VENTA_PROMEDIO_MENSUAL
+AS
+	SELECT provincia_nombre, mes, anio 'año', SUM(venta_total) / COUNT(DISTINCT venta_total) 'Venta Promedio Mensual Según Provincia'
+	FROM SARTEN_QUE_LADRA.Hechos_Venta venta
+		JOIN SARTEN_QUE_LADRA.BI_Provincia provincia ON venta.provincia_almacen_id = provincia.provincia_id
+		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON venta.tiempo_id = tiempo.tiempo_id
+	GROUP BY provincia_id, mes, anio
+
+/*
+4. Rendimiento de rubros. Los 5 rubros con mayores ventas para cada
+cuatrimestre de cada año según la localidad y rango etario de los clientes.
+
+TODO: Revisar porque ya no existe VentaXRubro.
+*/
+GO
+
+CREATE VIEW SARTEN_QUE_LADRA.RENDIMIENTO_DE_RUBROS
+AS
+	SELECT rubro_descripcion, COUNT(venta.venta_id) cantidad_de_ventas, cuatrimestre, localidad.localidad_nombre, rango_etario
+	FROM SARTEN_QUE_LADRA.Hechos_Venta venta 
+		JOIN SARTEN_QUE_LADRA.BI_VentaXRubro vxr ON venta.venta_id = vxr.venta_id
+		JOIN SARTEN_QUE_LADRA.BI_Rubro rubro ON vxr.rubro_id = rubro.rubro_id
+		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON venta.venta_id = tiempo.tiempo_id
+		JOIN SARTEN_QUE_LADRA.BI_Rango_Etario rango_etario ON venta.rango_etario_cliente = rango_etario.rango_etario_id
+		JOIN SARTEN_QUE_LADRA.BI_Localidad localidad ON venta.localidad_cliente_id = localidad.localidad_id
+GO
