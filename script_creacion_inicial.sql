@@ -3,10 +3,8 @@ GO
 CREATE SCHEMA SARTEN_QUE_LADRA
 GO
 
--- DROP SCHEMA SARTEN_QUE_LADRA;
-
 -- ============================== --
---          TABLAS				  --
+--          TABLAS		  --
 -- ============================== --
 
 CREATE TABLE SARTEN_QUE_LADRA.Rubro (
@@ -42,17 +40,12 @@ CREATE TABLE SARTEN_QUE_LADRA.Producto (
 	producto_precio DECIMAL(18,2),
 );
 
-CREATE TABLE SARTEN_QUE_LADRA.ModeloXProducto (
-	producto_id DECIMAL(18,0),
-	modelo_id DECIMAL(18,0),
-	PRIMARY KEY (producto_id, modelo_id)
-);
-
 CREATE TABLE SARTEN_QUE_LADRA.MarcaXProducto (
 	producto_id DECIMAL(18,0),
 	marca_id DECIMAL(18,0),
 	PRIMARY KEY (producto_id, marca_id),
 );
+
 
 CREATE TABLE SARTEN_QUE_LADRA.ProductoXSubrubro (
 	producto_id DECIMAL(18,0),
@@ -94,6 +87,12 @@ CREATE TABLE SARTEN_QUE_LADRA.DomicilioXUsuario(
 	PRIMARY KEY (usuario_id, domicilio_id),
 );
 
+CREATE TABLE SARTEN_QUE_LADRA.ModeloXProducto (
+	producto_id DECIMAL(18,0),
+	modelo_id DECIMAL(18,0),
+	PRIMARY KEY (producto_id, modelo_id)
+);
+
 CREATE TABLE SARTEN_QUE_LADRA.Cliente (
 	cliente_id DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	cliente_nombre NVARCHAR(50),
@@ -120,8 +119,8 @@ CREATE TABLE SARTEN_QUE_LADRA.TipoEnvio (
 CREATE TABLE SARTEN_QUE_LADRA.Venta ( 
 	venta_codigo DECIMAL(18,0) PRIMARY KEY, 
 	cliente_id DECIMAL(18,0),
-	venta_fecha DATE,
-	venta_hora TIME,
+	venta_fecha DATETIME,
+	venta_hora DATETIME,
 	venta_total DECIMAL(18,2)
 );
 
@@ -162,7 +161,7 @@ CREATE TABLE SARTEN_QUE_LADRA.Publicacion (
 	publicacion_costo DECIMAL(18,2),
 	publicacion_porc_venta DECIMAL(18,2),
 	producto_id DECIMAL(18,0),
-	vendedor_id DECIMAL(18,0),
+	vendedor_id DECIMAL(18,0), -- Por ahora lo dejo como vendedor ID
 	almacen_codigo DECIMAL(18,0),
 );
 
@@ -204,18 +203,17 @@ CREATE TABLE SARTEN_QUE_LADRA.DetallePago (
 	tarjeta_numero NVARCHAR(50),
 	tarjeta_fecha_vencimiento DATE,
 	detalle_pago_cuotas DECIMAL(18,0),
-	id_medio_x_pago DECIMAL(18,0),
 )
 
 CREATE TABLE SARTEN_QUE_LADRA.TipoMedioPago (
-	id_tipo_medio_pago DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
+	id_medio_pago DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	tipo_medio_pago NVARCHAR(50)
 )
 
 CREATE TABLE SARTEN_QUE_LADRA.MedioPago(
 	id_medio_de_pago DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	medio_de_pago NVARCHAR(50),
-	id_tipo_medio_pago DECIMAL(18,0),
+	tipo_medio_pago DECIMAL(18,0)
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.MedioXPago(
@@ -225,57 +223,84 @@ CREATE TABLE SARTEN_QUE_LADRA.MedioXPago(
 	id_detalle_pago DECIMAL(18,0),
 );
 
+-- ============================== --
+--         CONSTRAINTS            --
+-- ============================== --
+
+-- FK -> SubrubroXRubro
+ALTER TABLE SARTEN_QUE_LADRA.SubrubroXRubro ADD CONSTRAINT fk_subrubroxrubro_rubro_id FOREIGN KEY (rubro_id) REFERENCES SARTEN_QUE_LADRA.Rubro (rubro_id);
+ALTER TABLE SARTEN_QUE_LADRA.SubrubroXRubro ADD CONSTRAINT fk_subrubroxrubro_subrubro_id FOREIGN KEY (subrubro_id) REFERENCES SARTEN_QUE_LADRA.Subrubro (subrubro_id);
+
+-- FK -> ModeloXProducto
+ALTER TABLE SARTEN_QUE_LADRA.ModeloXProducto ADD CONSTRAINT fk_modeloproducto_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto (producto_id);
+ALTER TABLE SARTEN_QUE_LADRA.ModeloXProducto ADD CONSTRAINT fk_modeloproducto_modelo FOREIGN KEY (modelo_id) REFERENCES SARTEN_QUE_LADRA.Modelo (modelo_codigo);
+
+-- FK -> MarcaXProducto
+ALTER TABLE SARTEN_QUE_LADRA.MarcaXProducto ADD CONSTRAINT fk_marcaproducto_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto (producto_id);
+ALTER TABLE SARTEN_QUE_LADRA.MarcaXProducto ADD CONSTRAINT fk_marcaproducto_marca FOREIGN KEY (marca_id) REFERENCES SARTEN_QUE_LADRA.Marca (marca_id);
+
+-- FK -> ProductoXSubrubro
+ALTER TABLE SARTEN_QUE_LADRA.ProductoXSubrubro ADD CONSTRAINT fk_productosubrubro_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto (producto_id);
+ALTER TABLE SARTEN_QUE_LADRA.ProductoXSubrubro ADD CONSTRAINT fk_productosubrubro_subrubro FOREIGN KEY (subrubro_id) REFERENCES SARTEN_QUE_LADRA.Subrubro (subrubro_id);
+
+-- FK -> Localidad
+ALTER TABLE SARTEN_QUE_LADRA.Localidad ADD CONSTRAINT fk_localidad_provincia FOREIGN KEY (provincia_id) REFERENCES SARTEN_QUE_LADRA.Provincia (provincia_id);
+
+-- FK -> Domicilio
+ALTER TABLE SARTEN_QUE_LADRA.Domicilio ADD CONSTRAINT fk_domicilio_localidad FOREIGN KEY (localidad_id) REFERENCES SARTEN_QUE_LADRA.Localidad (localidad_id);
+
+-- FK -> DomicilioXUsuario
+ALTER TABLE SARTEN_QUE_LADRA.DomicilioXUsuario ADD CONSTRAINT fk_domiciliousuario_usuario FOREIGN KEY (usuario_id) REFERENCES SARTEN_QUE_LADRA.Usuario (usuario_id);
+ALTER TABLE SARTEN_QUE_LADRA.DomicilioXUsuario ADD CONSTRAINT fk_domiciliousuario_domicilio FOREIGN KEY (domicilio_id) REFERENCES SARTEN_QUE_LADRA.Domicilio (domicilio_id);
+
+-- FK -> Cliente y vendedor
+ALTER TABLE SARTEN_QUE_LADRA.Cliente ADD CONSTRAINT fk_cliente_usuario FOREIGN KEY (usuario_id) REFERENCES SARTEN_QUE_LADRA.Usuario (usuario_id);
+ALTER TABLE SARTEN_QUE_LADRA.Vendedor ADD CONSTRAINT fk_vendedor_usuario FOREIGN KEY (usuario_id) REFERENCES SARTEN_QUE_LADRA.Usuario (usuario_id);
+
+-- FK -> Envio
+ALTER TABLE SARTEN_QUE_LADRA.Envio ADD CONSTRAINT fk_envio_venta FOREIGN KEY (venta_codigo) REFERENCES SARTEN_QUE_LADRA.Venta (venta_codigo);
+ALTER TABLE SARTEN_QUE_LADRA.Envio ADD CONSTRAINT fk_envio_domicilio FOREIGN KEY (envio_domicilio) REFERENCES SARTEN_QUE_LADRA.Domicilio (domicilio_id);
+ALTER TABLE SARTEN_QUE_LADRA.Envio ADD CONSTRAINT fk_envio_tipo_envio FOREIGN KEY (tipo_envio_id) REFERENCES SARTEN_QUE_LADRA.TipoEnvio (tipo_envio_id);
+
+-- FK -> Factura
+ALTER TABLE SARTEN_QUE_LADRA.Factura ADD CONSTRAINT fk_factura_vendedor FOREIGN KEY (vendedor_id) REFERENCES SARTEN_QUE_LADRA.Vendedor (vendedor_id);
+
+-- FK -> Almacen
+ALTER TABLE SARTEN_QUE_LADRA.Almacen ADD CONSTRAINT fk_almacen_localidad FOREIGN KEY (localidad_id) REFERENCES SARTEN_QUE_LADRA.Localidad;
+
+-- FK -> Publicacion
+ALTER TABLE SARTEN_QUE_LADRA.Publicacion ADD CONSTRAINT fk_publicacion_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto;
+ALTER TABLE SARTEN_QUE_LADRA.Publicacion ADD CONSTRAINT fk_publicacion_vendedor FOREIGN KEY (vendedor_id) REFERENCES SARTEN_QUE_LADRA.Vendedor;
+ALTER TABLE SARTEN_QUE_LADRA.Publicacion ADD CONSTRAINT fk_publicacion_almacen FOREIGN KEY (almacen_codigo) REFERENCES SARTEN_QUE_LADRA.Almacen;
+
+-- FK -> DetalleFactura
+ALTER TABLE SARTEN_QUE_LADRA.DetalleFactura ADD CONSTRAINT fk_detallefactura_publicacion FOREIGN KEY (publicacion_codigo) REFERENCES SARTEN_QUE_LADRA.Publicacion;
+ALTER TABLE SARTEN_QUE_LADRA.DetalleFactura ADD CONSTRAINT fk_detallefactura_concepto FOREIGN KEY (detalle_concepto_id) REFERENCES SARTEN_QUE_LADRA.Concepto;
+ALTER TABLE SARTEN_QUE_LADRA.DetalleFactura ADD CONSTRAINT fk_detallefactura_factura FOREIGN KEY (factura_numero) REFERENCES SARTEN_QUE_LADRA.Factura;
+
+-- FK -> DetalleVenta
+ALTER TABLE SARTEN_QUE_LADRA.DetalleVenta ADD CONSTRAINT fk_detalleventa_venta FOREIGN KEY (venta_codigo) REFERENCES SARTEN_QUE_LADRA.Venta;
+ALTER TABLE SARTEN_QUE_LADRA.DetalleVenta ADD CONSTRAINT fk_detalleventa_publicacion FOREIGN KEY (publicacion_codigo) REFERENCES SARTEN_QUE_LADRA.Publicacion;
+
+-- FK -> Venta
+ALTER TABLE SARTEN_QUE_LADRA.Venta ADD CONSTRAINT fk_venta_cliente FOREIGN KEY (cliente_id) REFERENCES SARTEN_QUE_LADRA.Cliente;
+
+-- FK -> Pago
+ALTER TABLE SARTEN_QUE_LADRA.Pago ADD CONSTRAINT fk_pago_venta FOREIGN KEY (venta_codigo) REFERENCES SARTEN_QUE_LADRA.Venta;
+
+-- FK -> MedioXPago
+ALTER TABLE SARTEN_QUE_LADRA.MedioXPago ADD CONSTRAINT fk_mediopago_pago FOREIGN KEY (id_pago) REFERENCES SARTEN_QUE_LADRA.Pago;
+ALTER TABLE SARTEN_QUE_LADRA.MedioXPago ADD CONSTRAINT fk_mediopago_mediodepago FOREIGN KEY (id_medio_de_pago) REFERENCES SARTEN_QUE_LADRA.MedioPago;
+ALTER TABLE SARTEN_QUE_LADRA.MedioXPago ADD CONSTRAINT fk_mediopago_detallepago FOREIGN KEY (id_detalle_pago) REFERENCES SARTEN_QUE_LADRA.DetallePago;
+
+-- FK -> MedioPago
+ALTER TABLE SARTEN_QUE_LADRA.MedioPago ADD CONSTRAINT fk_mediopago_tipomediopago FOREIGN KEY (tipo_medio_pago) REFERENCES SARTEN_QUE_LADRA.TipoMedioPago;
+
+GO
+
 -- ============================== -- 
 --      STORED PROCEDURES         --
 -- ============================== --
-
-GO
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_LOCALIDAD
-AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Localidad(localidad_nombre, provincia_id) 
-
-    SELECT DISTINCT CLI_USUARIO_DOMICILIO_LOCALIDAD, p.provincia_id FROM gd_esquema.Maestra
-	JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = CLI_USUARIO_DOMICILIO_PROVINCIA
-    WHERE CLI_USUARIO_DOMICILIO_LOCALIDAD IS NOT NULL
-
-	UNION
-
-	SELECT DISTINCT VEN_USUARIO_DOMICILIO_LOCALIDAD, p.provincia_id FROM gd_esquema.Maestra
-	JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = VEN_USUARIO_DOMICILIO_PROVINCIA
-    WHERE VEN_USUARIO_DOMICILIO_LOCALIDAD IS NOT NULL
-
-	UNION
-
-	SELECT DISTINCT ALMACEN_Localidad, p.provincia_id FROM gd_esquema.Maestra
-	JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = ALMACEN_Localidad
-    WHERE ALMACEN_Localidad IS NOT NULL
-END
-
-GO
-
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_MARCAXPRODUCTO
-AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.MarcaXProducto (producto_id, marca_id) 
-	SELECT DISTINCT producto_id, marca_id
-	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Marca marca ON maestra.PRODUCTO_MARCA = marca.marca_nombre
-									JOIN SARTEN_QUE_LADRA.Producto producto ON maestra.PRODUCTO_CODIGO = producto.producto_codigo AND maestra.PRODUCTO_PRECIO = producto.producto_precio
-	WHERE maestra.PRODUCTO_CODIGO IS NOT NULL AND PRODUCTO_MARCA IS NOT NULL;
-END
-
-SELECT PRODUCTO_CODIGO, PRODUCTO_DESCRIPCION,
-	PRODUCTO_MARCA, PRODUCTO_MOD_CODIGO, PRODUCTO_PRECIO, PRODUCTO_SUB_RUBRO, PRODUCTO_RUBRO_DESCRIPCION from gd_esquema.Maestra
-WHERE PRODUCTO_CODIGO = 'Codigo:6131231312' and PRODUCTO_SUB_RUBRO = 'Sub_Rubro Nº476791'
-
-GO
-
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PRODUCTO
-AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Producto(producto_codigo, producto_descripcion, producto_precio)
-	SELECT DISTINCT PRODUCTO_CODIGO, PRODUCTO_DESCRIPCION, PRODUCTO_PRECIO from gd_esquema.Maestra
-	WHERE PRODUCTO_CODIGO IS NOT NULL AND PRODUCTO_DESCRIPCION IS NOT NULL AND PRODUCTO_PRECIO IS NOT NULL
-END
-
-GO
 
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PROVINCIA 
 AS BEGIN 
@@ -293,16 +318,28 @@ AS BEGIN
     SELECT DISTINCT ALMACEN_PROVINCIA FROM gd_esquema.Maestra
     WHERE ALMACEN_PROVINCIA IS NOT NULL;
 END
+
 GO
 
--- DROP TABLE SARTEN_QUE_LADRA.Marca
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_LOCALIDAD
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.Localidad(localidad_nombre, provincia_id) 
 
--- Incialmente esta migrado con el ID, habria que cambiarlo o si queda asi, dejarlo (VER)
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_MARCA 
-AS BEGIN 
-    INSERT INTO SARTEN_QUE_LADRA.Marca(marca_nombre)
-	SELECT DISTINCT PRODUCTO_MARCA FROM gd_esquema.Maestra
-	WHERE PRODUCTO_MARCA IS NOT NULL
+    SELECT DISTINCT CLI_USUARIO_DOMICILIO_LOCALIDAD, p.provincia_id FROM gd_esquema.Maestra
+	JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = CLI_USUARIO_DOMICILIO_PROVINCIA
+    WHERE CLI_USUARIO_DOMICILIO_LOCALIDAD IS NOT NULL
+
+	UNION
+
+	SELECT DISTINCT VEN_USUARIO_DOMICILIO_LOCALIDAD, p.provincia_id FROM gd_esquema.Maestra
+	JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = VEN_USUARIO_DOMICILIO_PROVINCIA
+    WHERE VEN_USUARIO_DOMICILIO_LOCALIDAD IS NOT NULL
+
+	UNION
+
+	SELECT DISTINCT ALMACEN_Localidad, p.provincia_id FROM gd_esquema.Maestra
+	JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_nombre = ALMACEN_PROVINCIA
+    WHERE ALMACEN_Localidad IS NOT NULL
 END
 
 GO
@@ -336,24 +373,25 @@ AS BEGIN
             AND loc.provincia_nombre = m.VEN_USUARIO_DOMICILIO_PROVINCIA
 	WHERE VEN_USUARIO_DOMICILIO_CALLE IS NOT NULL
 END
+
 GO
 
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_TIPO_ENVIO
-AS BEGIN
-		INSERT INTO SARTEN_QUE_LADRA.TipoEnvio(envio_nombre)
-		SELECT DISTINCT ENVIO_TIPO from gd_esquema.Maestra
-		WHERE ENVIO_TIPO IS NOT NULL
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_MARCA 
+AS BEGIN 
+    INSERT INTO SARTEN_QUE_LADRA.Marca(marca_nombre)
+	SELECT DISTINCT PRODUCTO_MARCA FROM gd_esquema.Maestra
+	WHERE PRODUCTO_MARCA IS NOT NULL
 END
 
 GO
 
--- Idem arriba, ver si conviene que tenga el ID
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_MODELO
 AS BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.Modelo(modelo_codigo, modelo_descripcion)
 	SELECT DISTINCT PRODUCTO_MOD_CODIGO, PRODUCTO_MOD_DESCRIPCION from gd_esquema.Maestra
 	WHERE PRODUCTO_MOD_CODIGO IS NOT NULL
 END
+
 GO
 
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_ALMACEN
@@ -369,9 +407,54 @@ AS BEGIN
             AND loc.provincia_nombre = m.ALMACEN_PROVINCIA
 	WHERE ALMACEN_CODIGO IS NOT NULL
 END
-------------------------------------------
 
 GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PRODUCTO
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.Producto(producto_codigo, producto_descripcion, producto_precio)
+	SELECT DISTINCT PRODUCTO_CODIGO, PRODUCTO_DESCRIPCION, PRODUCTO_PRECIO from gd_esquema.Maestra
+	WHERE PRODUCTO_CODIGO IS NOT NULL
+END
+
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_MARCAXPRODUCTO
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.MarcaXProducto (producto_id, marca_id) 
+	SELECT DISTINCT producto_id, marca_id
+	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Marca marca ON maestra.PRODUCTO_MARCA = marca.marca_nombre
+									JOIN SARTEN_QUE_LADRA.Producto producto ON maestra.PRODUCTO_CODIGO = producto.producto_codigo 
+													AND maestra.PRODUCTO_PRECIO = producto.producto_precio
+													AND maestra.PRODUCTO_DESCRIPCION = producto.producto_descripcion
+	WHERE maestra.PRODUCTO_CODIGO IS NOT NULL AND PRODUCTO_MARCA IS NOT NULL;
+END
+
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_MODELOXPRODUCTO
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.ModeloXProducto (producto_id, modelo_id)
+	SELECT DISTINCT producto_id, modelo_codigo
+	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Producto producto ON maestra.PRODUCTO_CODIGO = producto.producto_codigo
+										AND maestra.PRODUCTO_DESCRIPCION = producto.producto_descripcion
+										AND maestra.PRODUCTO_PRECIO = producto.producto_precio
+									JOIN SARTEN_QUE_LADRA.Modelo modelo ON maestra.PRODUCTO_MOD_CODIGO = modelo.modelo_codigo
+										AND maestra.PRODUCTO_MOD_DESCRIPCION = modelo.modelo_descripcion
+	WHERE maestra.PRODUCTO_CODIGO IS NOT NULL AND maestra.PRODUCTO_MOD_CODIGO IS NOT NULL
+END
+
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_TIPO_ENVIO
+AS BEGIN
+		INSERT INTO SARTEN_QUE_LADRA.TipoEnvio(envio_nombre)
+		SELECT DISTINCT ENVIO_TIPO from gd_esquema.Maestra
+		WHERE ENVIO_TIPO IS NOT NULL
+END
+
+GO
+
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_USUARIO
 AS BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.Usuario(usuario_nombre, usuario_password, usuario_fecha_creacion)
@@ -386,19 +469,154 @@ END
 
 GO
 
---MIGRACION USUARIO
-
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_CLIENTE
 AS BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.Cliente(cliente_nombre, cliente_apellido, cliente_fecha_nac, cliente_mail, cliente_dni, usuario_id)
 	SELECT DISTINCT CLIENTE_NOMBRE, CLIENTE_APELLIDO, CLIENTE_FECHA_NAC, CLIENTE_MAIL, CLIENTE_DNI, u.usuario_id from gd_esquema.Maestra 
 		JOIN SARTEN_QUE_LADRA.Usuario u ON 
-		CLI_USUARIO_NOMBRE = u.usuario_nombre AND
+		(CLI_USUARIO_NOMBRE = u.usuario_nombre AND
 		CLI_USUARIO_PASS = u.usuario_password AND
-		CLI_USUARIO_FECHA_CREACION = u.usuario_fecha_creacion
+		CLI_USUARIO_FECHA_CREACION = u.usuario_fecha_creacion)
 END
 
-----------------------------------------------------------------------------------------------------
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_VENDEDOR
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.Vendedor(vendedor_cuit, vendedor_razon_social, vendedor_mail, usuario_id)
+	SELECT DISTINCT VENDEDOR_CUIT, VENDEDOR_RAZON_SOCIAL, VENDEDOR_MAIL, u.usuario_id from gd_esquema.Maestra 
+	JOIN SARTEN_QUE_LADRA.Usuario u ON 
+		VEN_USUARIO_NOMBRE = u.usuario_nombre AND
+		VEN_USUARIO_PASS = u.usuario_password AND
+		VEN_USUARIO_FECHA_CREACION = u.usuario_fecha_creacion
+END
+
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_VENTA
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.Venta(venta_codigo, cliente_id, venta_fecha, venta_hora, venta_total)
+	SELECT DISTINCT VENTA_CODIGO, c.cliente_id, VENTA_FECHA, NULL, VENTA_TOTAL -- CONSTRAINT DEFAULT NULL 
+	FROM gd_esquema.Maestra m
+	JOIN SARTEN_QUE_LADRA.Cliente c ON 
+		 m.CLIENTE_NOMBRE = c.cliente_nombre AND 
+		 m.CLIENTE_APELLIDO = c.cliente_apellido AND
+		 m.CLIENTE_FECHA_NAC = c.cliente_fecha_nac AND
+		 m.CLIENTE_MAIL = c.cliente_mail AND
+		 m.CLIENTE_DNI = c.cliente_dni
+	WHERE VENTA_CODIGO IS NOT NULL
+END
+
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_ENVIO
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.Envio (venta_codigo, envio_domicilio, envio_fecha_programada, envio_horario_inicio, envio_horario_fin, 
+										envio_costo, envio_fecha_hora_entrega, tipo_envio_id)
+	SELECT DISTINCT VENTA_CODIGO, d.domicilio_id, ENVIO_FECHA_PROGAMADA, ENVIO_HORA_INICIO, ENVIO_HORA_FIN_INICIO, ENVIO_COSTO, ENVIO_FECHA_ENTREGA, t.tipo_envio_id 
+	FROM gd_esquema.Maestra JOIN SARTEN_QUE_LADRA.Domicilio d ON CLI_USUARIO_DOMICILIO_CALLE = d.domicilio_calle 
+								AND CLI_USUARIO_DOMICILIO_NRO_CALLE = d.domicilio_nro_calle 
+								AND CLI_USUARIO_DOMICILIO_PISO = d.domicilio_piso 
+								AND CLI_USUARIO_DOMICILIO_DEPTO = d.domicilio_depto 
+								AND CLI_USUARIO_DOMICILIO_CP = d.domicilio_cp
+							JOIN SARTEN_QUE_LADRA.Localidad l ON CLI_USUARIO_DOMICILIO_LOCALIDAD = l.localidad_nombre
+							JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_id = l.provincia_id
+							JOIN SARTEN_QUE_LADRA.TipoEnvio t ON ENVIO_TIPO = t.envio_nombre;
+END
+
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PUBLICACION
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.Publicacion (publicacion_codigo, publicacion_descripcion, publicacion_stock, publicacion_fecha_fin, 
+		publicacion_fecha_inicio, publicacion_precio, publicacion_costo, publicacion_porc_venta, producto_id, vendedor_id, almacen_codigo)
+	SELECT DISTINCT PUBLICACION_CODIGO, PUBLICACION_DESCRIPCION, PUBLICACION_STOCK, PUBLICACION_FECHA_V, PUBLICACION_FECHA, PUBLICACION_PRECIO, 
+		PUBLICACION_COSTO, PUBLICACION_PORC_VENTA, producto.producto_id, vendedor.vendedor_id, maestra.ALMACEN_CODIGO
+	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Producto producto ON maestra.PRODUCTO_CODIGO = producto.producto_codigo
+										AND maestra.PRODUCTO_DESCRIPCION = producto.producto_descripcion
+										AND maestra.PRODUCTO_PRECIO = producto.producto_precio
+									JOIN SARTEN_QUE_LADRA.Almacen almacen ON maestra.ALMACEN_CODIGO = almacen.almacen_codigo 
+									JOIN SARTEN_QUE_LADRA.Vendedor vendedor ON
+										maestra.VENDEDOR_CUIT = vendedor.vendedor_cuit AND
+										maestra.VENDEDOR_MAIL = vendedor.vendedor_mail AND
+										maestra.VENDEDOR_RAZON_SOCIAL = vendedor.vendedor_razon_social
+	WHERE maestra.PUBLICACION_CODIGO IS NOT NULL
+END
+
+GO
+
+GO
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_DETALLE_FACTURA
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.DetalleFactura (publicacion_codigo, detalle_concepto_id, detalle_factura_total, factura_numero, detalle_factura_tipo, detalle_factura_precio, detalle_factura_cantidad, detalle_factura_subtotal)
+	SELECT DISTINCT maestra.PUBLICACION_CODIGO, concepto.detalle_concepto_id, FACTURA_DET_PRECIO * FACTURA_DET_CANTIDAD, maestra.FACTURA_NUMERO, maestra.FACTURA_DET_TIPO, FACTURA_DET_PRECIO, FACTURA_DET_CANTIDAD, FACTURA_DET_SUBTOTAL
+	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Publicacion p ON p.publicacion_codigo = maestra.PUBLICACION_CODIGO	
+	JOIN SARTEN_QUE_LADRA.Concepto concepto on maestra.FACTURA_DET_TIPO = concepto_tipo
+	WHERE maestra.PUBLICACION_CODIGO IS NOT NULL AND maestra.FACTURA_NUMERO IS NOT NULL AND maestra.FACTURA_DET_TIPO IS NOT NULL
+END
+
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_DOMICILIOXUSUARIO
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.DomicilioXUsuario (usuario_id, domicilio_id)
+	SELECT DISTINCT usuario_id, domicilio_id
+	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Usuario usuario ON maestra.CLI_USUARIO_NOMBRE = usuario.usuario_nombre 
+										AND maestra.CLI_USUARIO_PASS = usuario.usuario_password 
+										AND maestra.CLI_USUARIO_FECHA_CREACION = usuario.usuario_fecha_creacion
+									JOIN SARTEN_QUE_LADRA.Domicilio domicilio ON maestra.CLI_USUARIO_DOMICILIO_CALLE = domicilio.domicilio_calle
+										AND maestra.CLI_USUARIO_DOMICILIO_CP = domicilio.domicilio_cp
+										AND maestra.CLI_USUARIO_DOMICILIO_NRO_CALLE = domicilio.domicilio_nro_calle
+										AND maestra.CLI_USUARIO_DOMICILIO_PISO = domicilio.domicilio_piso
+										AND maestra.CLI_USUARIO_DOMICILIO_DEPTO = domicilio.domicilio_depto
+									JOIN SARTEN_QUE_LADRA.Localidad localidad ON localidad.localidad_id = domicilio.localidad_id
+									JOIN SARTEN_QUE_LADRA.Provincia provincia ON provincia.provincia_id = localidad.provincia_id
+	UNION
+	SELECT DISTINCT usuario_id, domicilio_id
+	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Usuario usuario ON maestra.VEN_USUARIO_NOMBRE = usuario.usuario_nombre 
+										AND maestra.VEN_USUARIO_PASS = usuario.usuario_password 
+										AND maestra.VEN_USUARIO_FECHA_CREACION = usuario.usuario_fecha_creacion
+									JOIN SARTEN_QUE_LADRA.Domicilio domicilio ON maestra.VEN_USUARIO_DOMICILIO_CALLE = domicilio.domicilio_calle
+										AND maestra.VEN_USUARIO_DOMICILIO_CP = domicilio.domicilio_cp
+										AND maestra.VEN_USUARIO_DOMICILIO_NRO_CALLE = domicilio.domicilio_nro_calle
+										AND maestra.VEN_USUARIO_DOMICILIO_PISO = domicilio.domicilio_piso
+										AND maestra.VEN_USUARIO_DOMICILIO_DEPTO = domicilio.domicilio_depto
+									JOIN SARTEN_QUE_LADRA.Localidad localidad ON localidad.localidad_id = domicilio.localidad_id
+									JOIN SARTEN_QUE_LADRA.Provincia provincia ON provincia.provincia_id = localidad.provincia_id
+	WHERE usuario_id IS NOT NULL AND domicilio_id IS NOT NULL
+END
+
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_CONCEPTO
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.Concepto (concepto_tipo)
+	SELECT DISTINCT FACTURA_DET_TIPO
+	FROM gd_esquema.Maestra maestra
+	WHERE FACTURA_DET_TIPO IS NOT NULL
+END
+
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_FACTURA
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.Factura (factura_numero, factura_fecha, vendedor_id, factura_total)
+	SELECT DISTINCT FACTURA_NUMERO, FACTURA_FECHA, p.vendedor_id, FACTURA_TOTAL
+	FROM gd_esquema.Maestra m
+	JOIN SARTEN_QUE_LADRA.Publicacion p ON
+		p.publicacion_codigo = m.PUBLICACION_CODIGO
+	WHERE FACTURA_NUMERO IS NOT NULL
+END
+
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_DETALLE_VENTA
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.DetalleVenta(venta_codigo, publicacion_codigo, detalle_cantidad, detalle_subtotal, detalle_precio)
+	SELECT DISTINCT VENTA_CODIGO, PUBLICACION_CODIGO, VENTA_DET_CANT, VENTA_DET_SUB_TOTAL, VENTA_DET_PRECIO
+	FROM gd_esquema.Maestra
+	WHERE VENTA_CODIGO IS NOT NULL AND PUBLICACION_CODIGO IS NOT NULL
+END
 
 GO
 
@@ -446,133 +664,24 @@ END
 
 GO
 
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_CONCEPTO
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PAGO
 AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Concepto (concepto_tipo)
-	SELECT DISTINCT FACTURA_DET_TIPO
-	FROM gd_esquema.Maestra maestra
-	WHERE FACTURA_DET_TIPO IS NOT NULL
-END
-
-GO
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_DETALLE_FACTURA
-AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.DetalleFactura (publicacion_codigo, detalle_concepto_id, detalle_factura_total, factura_numero, detalle_factura_tipo, detalle_factura_precio, detalle_factura_cantidad, detalle_factura_subtotal)
-	SELECT DISTINCT maestra.PUBLICACION_CODIGO, concepto.detalle_concepto_id, FACTURA_DET_PRECIO * FACTURA_DET_CANTIDAD, maestra.FACTURA_NUMERO, maestra.FACTURA_DET_TIPO, FACTURA_DET_PRECIO, FACTURA_DET_CANTIDAD, FACTURA_DET_SUBTOTAL
-	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Publicacion p ON p.publicacion_codigo = maestra.PUBLICACION_CODIGO	
-	JOIN SARTEN_QUE_LADRA.Concepto concepto on maestra.FACTURA_DET_TIPO = concepto_tipo
-	WHERE maestra.PUBLICACION_CODIGO IS NOT NULL AND maestra.FACTURA_NUMERO IS NOT NULL AND maestra.FACTURA_DET_TIPO IS NOT NULL
+	INSERT INTO SARTEN_QUE_LADRA.Pago(venta_codigo, pago_importe, pago_fecha)
+	SELECT DISTINCT VENTA_CODIGO, PAGO_IMPORTE, PAGO_FECHA FROM gd_esquema.Maestra
+	WHERE VENTA_CODIGO IS NOT NULL
 END
 
 GO
 
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_FACTURA
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_DETALLE_PAGO
 AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Factura (factura_numero, factura_fecha, vendedor_id, factura_total)
-	SELECT DISTINCT FACTURA_NUMERO, FACTURA_FECHA, p.vendedor_id, FACTURA_TOTAL
-	FROM gd_esquema.Maestra m
-	JOIN SARTEN_QUE_LADRA.Publicacion p ON
-		p.publicacion_codigo = m.PUBLICACION_CODIGO
-	WHERE FACTURA_NUMERO IS NOT NULL
+	INSERT INTO SARTEN_QUE_LADRA.DetallePago(tarjeta_numero, tarjeta_fecha_vencimiento, detalle_pago_cuotas)
+	SELECT DISTINCT PAGO_NRO_TARJETA, PAGO_FECHA_VENC_TARJETA, PAGO_CANT_CUOTAS FROM gd_esquema.Maestra
+	WHERE PAGO_NRO_TARJETA IS NOT NULL
 END
 
 GO
 
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_MODELOXPRODUCTO
-AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.ModeloXProducto (producto_id, modelo_id)
-	SELECT DISTINCT producto_id, modelo_codigo
-	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Producto producto ON maestra.PRODUCTO_CODIGO = producto.producto_codigo
-										AND maestra.PRODUCTO_DESCRIPCION = producto.producto_descripcion
-										AND maestra.PRODUCTO_PRECIO = producto.producto_precio
-									JOIN SARTEN_QUE_LADRA.Modelo modelo ON maestra.PRODUCTO_MOD_CODIGO = modelo.modelo_codigo
-										AND maestra.PRODUCTO_MOD_DESCRIPCION = modelo.modelo_descripcion
-	WHERE producto_id IS NOT NULL AND modelo_codigo IS NOT NULL
-END
-
-GO
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_DOMICILIOXUSUARIO
-AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.DomicilioXUsuario (usuario_id, domicilio_id)
-	SELECT DISTINCT usuario_id, domicilio_id
-	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Usuario usuario ON maestra.CLI_USUARIO_NOMBRE = usuario.usuario_nombre 
-										AND maestra.CLI_USUARIO_PASS = usuario.usuario_password 
-										AND maestra.CLI_USUARIO_FECHA_CREACION = usuario.usuario_fecha_creacion
-									JOIN SARTEN_QUE_LADRA.Domicilio domicilio ON maestra.CLI_USUARIO_DOMICILIO_CALLE = domicilio.domicilio_calle
-										AND maestra.CLI_USUARIO_DOMICILIO_CP = domicilio.domicilio_cp
-										AND maestra.CLI_USUARIO_DOMICILIO_NRO_CALLE = domicilio.domicilio_nro_calle
-										AND maestra.CLI_USUARIO_DOMICILIO_PISO = domicilio.domicilio_piso
-										AND maestra.CLI_USUARIO_DOMICILIO_DEPTO = domicilio.domicilio_depto
-									JOIN SARTEN_QUE_LADRA.Localidad localidad ON localidad.localidad_id = domicilio.localidad_id
-									JOIN SARTEN_QUE_LADRA.Provincia provincia ON provincia.provincia_id = localidad.provincia_id
-	UNION
-	SELECT DISTINCT usuario_id, domicilio_id
-	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Usuario usuario ON maestra.VEN_USUARIO_NOMBRE = usuario.usuario_nombre 
-										AND maestra.VEN_USUARIO_PASS = usuario.usuario_password 
-										AND maestra.VEN_USUARIO_FECHA_CREACION = usuario.usuario_fecha_creacion
-									JOIN SARTEN_QUE_LADRA.Domicilio domicilio ON maestra.VEN_USUARIO_DOMICILIO_CALLE = domicilio.domicilio_calle
-										AND maestra.VEN_USUARIO_DOMICILIO_CP = domicilio.domicilio_cp
-										AND maestra.VEN_USUARIO_DOMICILIO_NRO_CALLE = domicilio.domicilio_nro_calle
-										AND maestra.VEN_USUARIO_DOMICILIO_PISO = domicilio.domicilio_piso
-										AND maestra.VEN_USUARIO_DOMICILIO_DEPTO = domicilio.domicilio_depto
-									JOIN SARTEN_QUE_LADRA.Localidad localidad ON localidad.localidad_id = domicilio.localidad_id
-									JOIN SARTEN_QUE_LADRA.Provincia provincia ON provincia.provincia_id = localidad.provincia_id
-	WHERE usuario_id IS NOT NULL AND domicilio_id IS NOT NULL
-	--41.387
-END
-
-GO
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PUBLICACION
-AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Publicacion (publicacion_codigo, publicacion_descripcion, publicacion_stock, publicacion_fecha_fin, 
-		publicacion_fecha_inicio, publicacion_precio, publicacion_costo, publicacion_porc_venta, producto_id, vendedor_id, almacen_codigo)
-	SELECT DISTINCT PUBLICACION_CODIGO, PUBLICACION_DESCRIPCION, PUBLICACION_STOCK, PUBLICACION_FECHA_V, PUBLICACION_FECHA, PUBLICACION_PRECIO, 
-		PUBLICACION_COSTO, PUBLICACION_PORC_VENTA, producto.producto_id, vendedor.vendedor_id, maestra.ALMACEN_CODIGO
-	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Producto producto ON maestra.PRODUCTO_CODIGO = producto.producto_codigo
-										AND maestra.PRODUCTO_DESCRIPCION = producto.producto_descripcion
-										AND maestra.PRODUCTO_PRECIO = producto.producto_precio
-									JOIN SARTEN_QUE_LADRA.Almacen almacen ON maestra.ALMACEN_CODIGO = almacen.almacen_codigo 
-									JOIN SARTEN_QUE_LADRA.Vendedor vendedor ON
-										maestra.VENDEDOR_CUIT = vendedor.vendedor_cuit AND
-										maestra.VENDEDOR_MAIL = vendedor.vendedor_mail AND
-										maestra.VENDEDOR_RAZON_SOCIAL = vendedor.vendedor_razon_social
-	WHERE maestra.PUBLICACION_CODIGO IS NOT NULL
-END
-
-GO
-
----------------------------------------------
-
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_ENVIO
-AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Envio (venta_codigo, envio_domicilio, envio_fecha_programada, envio_horario_inicio, envio_horario_fin, 
-										envio_costo, envio_fecha_hora_entrega, tipo_envio_id)
-	SELECT DISTINCT VENTA_CODIGO, d.domicilio_id, ENVIO_FECHA_PROGAMADA, ENVIO_HORA_INICIO, ENVIO_HORA_FIN_INICIO, ENVIO_COSTO, ENVIO_FECHA_ENTREGA, t.tipo_envio_id 
-	FROM gd_esquema.Maestra JOIN SARTEN_QUE_LADRA.Domicilio d ON CLI_USUARIO_DOMICILIO_CALLE = d.domicilio_calle 
-								AND CLI_USUARIO_DOMICILIO_NRO_CALLE = d.domicilio_nro_calle 
-								AND CLI_USUARIO_DOMICILIO_PISO = d.domicilio_piso 
-								AND CLI_USUARIO_DOMICILIO_DEPTO = d.domicilio_depto 
-								AND CLI_USUARIO_DOMICILIO_CP = d.domicilio_cp
-							JOIN SARTEN_QUE_LADRA.Localidad l ON CLI_USUARIO_DOMICILIO_LOCALIDAD = l.localidad_nombre
-							JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_id = l.provincia_id
-							JOIN SARTEN_QUE_LADRA.TipoEnvio t ON ENVIO_TIPO = t.envio_nombre;
-END
-
-GO
------
-
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_VENDEDOR
-AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Vendedor(vendedor_cuit, vendedor_razon_social, vendedor_mail, usuario_id)
-	SELECT DISTINCT VENDEDOR_CUIT, VENDEDOR_RAZON_SOCIAL, VENDEDOR_MAIL, u.usuario_id from gd_esquema.Maestra 
-	JOIN SARTEN_QUE_LADRA.Usuario u ON 
-    VEN_USUARIO_NOMBRE = u.usuario_nombre AND
-    VEN_USUARIO_PASS = u.usuario_password AND
-    VEN_USUARIO_FECHA_CREACION = u.usuario_fecha_creacion
-END
-GO
-----------------
--------------------------------------------
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_TIPO_MEDIO_PAGO
 AS BEGIN
 
@@ -580,451 +689,68 @@ AS BEGIN
 	SELECT DISTINCT PAGO_TIPO_MEDIO_PAGO
 	FROM gd_esquema.Maestra
 	WHERE PAGO_TIPO_MEDIO_PAGO IS NOT NULL
-
 END
 
---MedioPago
 GO
+
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_MEDIO_PAGO
 AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.MedioPago(medio_de_pago,id_tipo_medio_pago)
-	SELECT DISTINCT tm.PAGO_MEDIO_PAGO, tmp.id_tipo_medio_pago --pasa a llamarse id_tipo_medio_pago
-	FROM gd_esquema.Maestra tm, SARTEN_QUE_LADRA.TipoMedioPago tmp
-	WHERE PAGO_MEDIO_PAGO IS NOT NULL AND
-		   tmp.tipo_medio_pago = tm.PAGO_TIPO_MEDIO_PAGO
+	INSERT INTO SARTEN_QUE_LADRA.MedioPago(medio_de_pago, tipo_medio_pago)
+	SELECT DISTINCT PAGO_MEDIO_PAGO, t.id_medio_pago 
+	FROM gd_esquema.Maestra JOIN SARTEN_QUE_LADRA.TipoMedioPago t ON PAGO_TIPO_MEDIO_PAGO = t.tipo_medio_pago
+	WHERE PAGO_MEDIO_PAGO IS NOT NULL
 END
---Tabla temporal para ayudar con MedioXPago
 
 GO
-CREATE PROCEDURE SARTEN_QUE_LADRA.AYUDA_PARA_MIGRAR_MEDIO_X_PAGO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_MEDIOXPAGO
 AS BEGIN
-	CREATE TABLE #PagoMedioDetalle(
-		   venta_codigo decimal(18, 0), pago_importe decimal(18, 0), pago_fecha date, --Pago
-		   tarjeta_numero NVARCHAR(50), tarjeta_fecha_vencimiento date, detalle_pago_cuotas decimal(18, 0), --DetallePago 
-		   medio_de_pago NVARCHAR(50),id_medio_de_pago decimal(18, 0) NULL  --MedioPago
-			)
-	ALTER TABLE #PagoMedioDetalle
-	ALTER COLUMN tarjeta_numero NVARCHAR(50)
-	COLLATE Modern_Spanish_CI_AS
-	ALTER TABLE #PagoMedioDetalle
-	ALTER COLUMN medio_de_pago NVARCHAR(50)
-	COLLATE Modern_Spanish_CI_AS
-	INSERT INTO #PagoMedioDetalle(
-		   venta_codigo, pago_importe, pago_fecha, --Pago
-		   tarjeta_numero, tarjeta_fecha_vencimiento, detalle_pago_cuotas, --DetallePago 
-		   medio_de_pago, id_medio_de_pago)
-	SELECT tm.VENTA_CODIGO, tm.PAGO_IMPORTE, tm.PAGO_FECHA, --Pago 
-		   tm.PAGO_NRO_TARJETA, tm.PAGO_FECHA_VENC_TARJETA, tm.PAGO_CANT_CUOTAS,--DetallePago
-		   tm.PAGO_MEDIO_PAGO, mp.id_medio_de_pago--MedioPago con el id_medio_de_pago ya asignado
-	FROM gd_esquema.Maestra tm
-	LEFT JOIN  SARTEN_QUE_LADRA.MedioPago mp ON (mp.medio_de_pago = tm.PAGO_MEDIO_PAGO)
-	WHERE tm.VENTA_CODIGO IS NOT NULL
-END
-
---Pago
-GO
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PAGO
-AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Pago(venta_codigo, pago_importe, pago_fecha)
-	SELECT venta_codigo, pago_importe, pago_fecha
-	FROM #PagoMedioDetalle
-END
-
---DetallePago
-GO
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_DETALLE_PAGO
-AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.DetallePago(tarjeta_numero, tarjeta_fecha_vencimiento, detalle_pago_cuotas)
-	SELECT tarjeta_numero, tarjeta_fecha_vencimiento, detalle_pago_cuotas
-	FROM SARTEN_QUE_LADRA.#PagoMedioDetalle
-END
-
---MedioXPago
-GO
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_MEDIO_X_PAGO
-	AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.MedioXPago(id_medio_de_pago, id_pago, id_detalle_pago)
-	SELECT pmd.id_medio_de_pago, p.id_pago, dp.detalle_pago_id
-	FROM SARTEN_QUE_LADRA.#PagoMedioDetalle pmd LEFT JOIN SARTEN_QUE_LADRA.Pago p ON (p.venta_codigo = pmd.venta_codigo) LEFT JOIN SARTEN_QUE_LADRA.DetallePago dp ON (dp.tarjeta_numero = pmd.tarjeta_numero)
+	INSERT INTO SARTEN_QUE_LADRA.MedioXPago(id_pago, id_medio_de_pago, id_detalle_pago)
+	SELECT DISTINCT p.id_pago, mp.id_medio_de_pago, dp.detalle_pago_id FROM gd_esquema.Maestra m 
+	JOIN SARTEN_QUE_LADRA.Pago p ON m.VENTA_CODIGO = p.venta_codigo AND 
+									m.PAGO_IMPORTE = p.pago_importe AND
+									m.PAGO_FECHA = p.pago_fecha
+	JOIN SARTEN_QUE_LADRA.DetallePago dp ON m.PAGO_NRO_TARJETA = dp.tarjeta_numero AND
+									    m.PAGO_FECHA_VENC_TARJETA = dp.tarjeta_fecha_vencimiento AND
+										m.PAGO_CANT_CUOTAS = dp.detalle_pago_cuotas
+	JOIN SARTEN_QUE_LADRA.MedioPago mp ON m.PAGO_MEDIO_PAGO = mp.medio_de_pago
+	JOIN SARTEN_QUE_LADRA.TipoMedioPago tp ON mp.tipo_medio_pago = tp.id_medio_pago
+	WHERE m.VENTA_CODIGO IS NOT NULL -- No hacen falta mas CONSTRAINTS
 END
 
 GO
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_VENTA
-AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Venta(venta_codigo, cliente_id, venta_fecha, venta_hora, venta_total)
-	SELECT DISTINCT VENTA_CODIGO, c.cliente_id, VENTA_FECHA, CAST('00:00:00' AS TIME), VENTA_TOTAL
-	FROM gd_esquema.Maestra m
-
-	JOIN SARTEN_QUE_LADRA.Cliente c ON 
-		 m.CLIENTE_NOMBRE = c.cliente_nombre AND 
-		 m.CLIENTE_APELLIDO = c.cliente_apellido AND
-		 m.CLIENTE_FECHA_NAC = c.cliente_fecha_nac AND
-		 m.CLIENTE_MAIL = c.cliente_mail AND
-		 m.CLIENTE_DNI = c.cliente_dni
-	WHERE VENTA_CODIGO IS NOT NULL
-END
-
---DetalleVenta
-GO
-
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_DETALLE_VENTA
-AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.DetalleVenta(venta_codigo, publicacion_codigo, detalle_cantidad, detalle_subtotal, detalle_precio)
-	SELECT DISTINCT VENTA_CODIGO, PUBLICACION_CODIGO, VENTA_DET_CANT, VENTA_DET_SUB_TOTAL, VENTA_DET_PRECIO
-	FROM gd_esquema.Maestra
-	WHERE VENTA_CODIGO IS NOT NULL AND PUBLICACION_CODIGO IS NOT NULL
-END
-
---------------------------------------------------------------
----- !
-
--- Esta si la cree, me caigo a los pedazos
-
-SELECT  CLI_USUARIO_NOMBRE, 
-		CLI_USUARIO_PASS,
-		CLI_USUARIO_FECHA_CREACION 
-from gd_esquema.Maestra
-
-SELECT CLIENTE_NOMBRE, CLIENTE_APELLIDO, CLIENTE_DNI, CLIENTE_FECHA_NAC, CLIENTE_MAIL from gd_esquema.Maestra
-WHERE CLIENTE_NOMBRE IS NOT NULL
-ORDER BY CLIENTE_NOMBRE, CLIENTE_APELLIDO
-
-SELECT DISTINCT ALMACEN_CODIGO, ALMACEN_CALLE, ALMACEN_COSTO_DIA_AL, ALMACEN_NRO_CALLE, ALMACEN_Localidad, ALMACEN_PROVINCIA from gd_esquema.Maestra
-SELECT DISTINCT PRODUCTO_CODIGO, PRODUCTO_MARCA from gd_esquema.Maestra
-
-SELECT DISTINCT PRODUCTO_MOD_CODIGO, PRODUCTO_MOD_DESCRIPCION FROM gd_esquema.Maestra
-where PRODUCTO_CODIGO = 'Codigo:6131231312'
-
-SELECT  ENVIO_COSTO
-		ENVIO_TIPO, 
-		COUNT(*) from gd_esquema.Maestra
-group by ENVIO_TIPO
-
-SELECT DISTINCT CLI_USUARIO_NOMBRE, CLI_USUARIO_PASS, CLI_USUARIO_FECHA_CREACION,
-			COUNT(*), COUNT(DISTINCT CLI_USUARIO_FECHA_CREACION) FROM gd_esquema.Maestra
-GROUP BY CLI_USUARIO_NOMBRE, CLI_USUARIO_PASS, CLI_USUARIO_FECHA_CREACION
-ORDER BY CLI_USUARIO_NOMBRE
-
-SELECT 
-*
-FROM gd_esquema.Maestra
-
-
-SELECT * FROM SARTEN_QUE_LADRA.Localidad a JOIN SARTEN_QUE_LADRA.Localidad b ON a.localidad_id = b.localidad_id
-WHERE a.localidad_id != b.localidad_id and a.localidad_nombre = b.localidad_nombre
-
-SELECT Provincia_id, provincia_nombre from SARTEN_QUE_LADRA.Provincia
-
-SELECT 
-	CLI_USUARIO_DOMICILIO_LOCALIDAD,
-	CLI_USUARIO_DOMICILIO_PROVINCIA,
-	VEN_USUARIO_DOMICILIO_LOCALIDAD,
-	VEN_USUARIO_DOMICILIO_PROVINCIA,
-	ALMACEN_Localidad,
-	ALMACEN_PROVINCIA
-from gd_esquema.Maestra
-
-SELECT 
-  CLIENTE_NOMBRE,
-  CLIENTE_APELLIDO,
-  CLIENTE_DNI,
-  CLI_USUARIO_NOMBRE,
-  CLI_USUARIO_PASS,
-  CLI_USUARIO_FECHA_CREACION
-FROM gd_esquema.Maestra
-WHERE CLIENTE_NOMBRE = 'AARON' and CLI_USUARIO_FECHA_CREACION  = '2002-02-17'
-
-SELECT VENDEDOR_MAIL, VEN_USUARIO_NOMBRE, VEN_USUARIO_PASS FROM gd_esquema.Maestra
 
 -- ============================== -- 
---      EXEC PROCEDURES           --
+--      EXEC PROCEDURES         --
 -- ============================== --
 
-EXEC SARTEN_QUE_LADRA.MIGRAR_PRODUCTO;
-EXEC SARTEN_QUE_LADRA.MIGRAR_PROVINCIA
-EXEC SARTEN_QUE_LADRA.MIGRAR_MARCA;
+EXEC SARTEN_QUE_LADRA.MIGRAR_PROVINCIA;
 EXEC SARTEN_QUE_LADRA.MIGRAR_LOCALIDAD;
-EXEC SARTEN_QUE_LADRA.MIGRAR_CONCEPTO;
-EXEC SARTEN_QUE_LADRA.MIGRAR_ALMACEN;
 EXEC SARTEN_QUE_LADRA.MIGRAR_DOMICILIO;
+EXEC SARTEN_QUE_LADRA.MIGRAR_MARCA;
 EXEC SARTEN_QUE_LADRA.MIGRAR_MODELO;
+EXEC SARTEN_QUE_LADRA.MIGRAR_ALMACEN;
+EXEC SARTEN_QUE_LADRA.MIGRAR_PRODUCTO;
+EXEC SARTEN_QUE_LADRA.MIGRAR_MARCAXPRODUCTO;
 EXEC SARTEN_QUE_LADRA.MIGRAR_MODELOXPRODUCTO;
+EXEC SARTEN_QUE_LADRA.MIGRAR_TIPO_ENVIO;
+EXEC SARTEN_QUE_LADRA.MIGRAR_USUARIO;
+EXEC SARTEN_QUE_LADRA.MIGRAR_CLIENTE;
+EXEC SARTEN_QUE_LADRA.MIGRAR_VENDEDOR;
+EXEC SARTEN_QUE_LADRA.MIGRAR_VENTA;
+EXEC SARTEN_QUE_LADRA.MIGRAR_ENVIO;
+EXEC SARTEN_QUE_LADRA.MIGRAR_CONCEPTO;
+EXEC SARTEN_QUE_LADRA.MIGRAR_PUBLICACION;
+EXEC SARTEN_QUE_LADRA.MIGRAR_FACTURA;
+EXEC SARTEN_QUE_LADRA.MIGRAR_DETALLE_FACTURA;
+EXEC SARTEN_QUE_LADRA.MIGRAR_DOMICILIOXUSUARIO;
+EXEC SARTEN_QUE_LADRA.MIGRAR_DETALLE_VENTA;
 EXEC SARTEN_QUE_LADRA.MIGRAR_RUBRO;
 EXEC SARTEN_QUE_LADRA.MIGRAR_SUBRUBRO;
 EXEC SARTEN_QUE_LADRA.MIGRAR_SUBRUBROXRUBRO;
 EXEC SARTEN_QUE_LADRA.MIGRAR_PRODUCTOXSUBRUBRO;
-EXEC SARTEN_QUE_LADRA.MIGRAR_USUARIO;
-EXEC SARTEN_QUE_LADRA.MIGRAR_DOMICILIOXUSUARIO;
-EXEC SARTEN_QUE_LADRA.MIGRAR_CLIENTE;
-EXEC SARTEN_QUE_LADRA.MIGRAR_VENDEDOR; -- 7 segundos hasta aca
-EXEC SARTEN_QUE_LADRA.MIGRAR_PUBLICACION;
-EXEC SARTEN_QUE_LADRA.MIGRAR_FACTURA;
-EXEC SARTEN_QUE_LADRA.MIGRAR_DETALLE_FACTURA;
-EXEC SARTEN_QUE_LADRA.MIGRAR_VENTA;
-EXEC SARTEN_QUE_LADRA.MIGRAR_DETALLE_VENTA;
-EXEC SARTEN_QUE_LADRA.MIGRAR_TIPO_ENVIO;
-EXEC SARTEN_QUE_LADRA.MIGRAR_ENVIO;
-EXEC SARTEN_QUE_LADRA.AYUDA_PARA_MIGRAR_MEDIO_X_PAGO;
-EXEC SARTEN_QUE_LADRA.MIGRAR_MARCAXPRODUCTO;
-EXEC SARTEN_QUE_LADRA.MIGRAR_TIPO_MEDIO_PAGO;
-------------------------------------------------------------- HASTA ACA PUDE MIGRAR. EL RESTO ME GENERO ERROR
-EXEC SARTEN_QUE_LADRA.MIGRAR_PAGO;
 EXEC SARTEN_QUE_LADRA.MIGRAR_DETALLE_PAGO;
+EXEC SARTEN_QUE_LADRA.MIGRAR_PAGO;
+EXEC SARTEN_QUE_LADRA.MIGRAR_TIPO_MEDIO_PAGO;
 EXEC SARTEN_QUE_LADRA.MIGRAR_MEDIO_PAGO;
-EXEC SARTEN_QUE_LADRA.MIGRAR_MEDIO_X_PAGO;
-
--- BOLUDECES PARA PROBAR COSAS
-SELECT * FROM SARTEN_QUE_LADRA.Provincia;
-select * from SARTEN_QUE_LADRA.Marca;
-SELECT * FROM SARTEN_QUE_LADRA.Localidad;
-SELECT * FROM SARTEN_QUE_LADRA.Concepto;
-SELECT * FROM SARTEN_QUE_LADRA.Almacen;
-SELECT * FROM SARTEN_QUE_LADRA.Modelo;
-SELECT * FROM SARTEN_QUE_LADRA.ModeloXProducto;
-SELECT * FROM SARTEN_QUE_LADRA.Rubro;
-SELECT * FROM SARTEN_QUE_LADRA.Subrubro;
-SELECT * FROM SARTEN_QUE_LADRA.SubrubroXRubro;
-SELECT * FROM SARTEN_QUE_LADRA.ProductoXSubrubro;
-SELECT * FROM SARTEN_QUE_LADRA.Usuario;
-SELECT * FROM SARTEN_QUE_LADRA.Domicilio;
-SELECT * FROM SARTEN_QUE_LADRA.DomicilioXUsuario;
-SELECT * FROM SARTEN_QUE_LADRA.Cliente;
-SELECT * FROM SARTEN_QUE_LADRA.Vendedor;
-SELECT * FROM SARTEN_QUE_LADRA.Factura;
-
-SELECT DISTINCT producto_marca from gd_esquema.Maestra
-where PRODUCTO_MARCA IS NOT NULL
-
-SELECT * FROM SARTEN_QUE_LADRA.Almacen
-ORDER BY SARTEN_QUE_LADRA.Almacen.almacen_codigo
-
-SELECT * FROM SARTEN_QUE_LADRA.Factura
-
-SELECT DISTINCT FACTURA_NUMERO, FACTURA_FECHA, FACTURA_TOTAL, PUBLICACION_CODIGO, PUBLICACION_DESCRIPCION, PUBLICACION_PRECIO 
-FROM gd_esquema.Maestra 
-WHERE FACTURA_NUMERO IS NOT NULL
-
-SELECT DISTINCT ALMACEN_CODIGO, ALMACEN_COSTO_DIA_AL, ALMACEN_NRO_CALLE, ALMACEN_Localidad, ALMACEN_NRO_CALLE, ALMACEN_PROVINCIA FROM gd_esquema.Maestra
-WHERE ALMACEN_CODIGO IS NOT NULL -- 68
-ORDER BY ALMACEN_CODIGO
-
-SELECT VENTA_CODIGO, PUBLICACION_CODIGO, VENTA_DET_CANT, VENTA_DET_SUB_TOTAL, VENTA_DET_PRECIO FROM gd_esquema.Maestra
-where VENTA_CODIGO IS NOT NULL AND PUBLICACION_CODIGO IS NOT NULL
-
--- SI, HAY 4 MARCAS
-
-SELECT PRODUCTO_MARCA from gd_esquema.Maestra
-WHERE PRODUCTO_MARCA IS NOT NULL
-
-EXEC SARTEN_QUE_LADRA.MIGRAR_PROVINCIA
-DROP TABLE SARTEN_QUE_LADRA.Provincia
--- SELECT * FROM SARTEN_QUE_LADRA.Provincia 
-
--- DROP TABLE SARTEN_QUE_LADRA.ProductoX
-
-CREATE TABLE SARTEN_QUE_LADRA.ProductoX (
-	producto_codigo NVARCHAR(50) PRIMARY KEY,
-	producto_descripcion NVARCHAR(50),
-	producto_precio DECIMAL(18,2),
-)
-
-SELECT * FROM SARTEN_QUE_LADRA.Domicilio
-
-DROP TABLE SARTEN_QUE_LADRA.Localidad
-DROP TABLE SARTEN_QUE_LADRA.Domicilio
-
--- TEST --
-SELECT DISTINCT CLI_USUARIO_DOMICILIO_CALLE, CLI_USUARIO_DOMICILIO_CP, CLI_USUARIO_DOMICILIO_DEPTO,
-		CLI_USUARIO_DOMICILIO_NRO_CALLE, CLI_USUARIO_DOMICILIO_PISO, CLI_USUARIO_DOMICILIO_LOCALIDAD, CLI_USUARIO_DOMICILIO_PROVINCIA FROM gd_esquema.Maestra
-		WHERE CLI_USUARIO_DOMICILIO_CALLE IS NOT NULL
-
-SELECT DISTINCT VEN_USUARIO_DOMICILIO_CALLE, VEN_USUARIO_DOMICILIO_CP, VEN_USUARIO_DOMICILIO_DEPTO,
-		VEN_USUARIO_DOMICILIO_NRO_CALLE, VEN_USUARIO_DOMICILIO_PISO, VEN_USUARIO_DOMICILIO_LOCALIDAD, VEN_USUARIO_DOMICILIO_PROVINCIA FROM gd_esquema.Maestra
-		WHERE VEN_USUARIO_DOMICILIO_CALLE IS NOT NULL
-
--- 41.298 + 89 = 41.378
-
--- CANTIDAD DE USUARIOS: 41.347
-SELECT DISTINCT CLI_USUARIO_NOMBRE, CLI_USUARIO_FECHA_CREACION, CLI_USUARIO_PASS
-FROM gd_esquema.Maestra
-
-UNION
-
-SELECT DISTINCT VEN_USUARIO_NOMBRE, VEN_USUARIO_FECHA_CREACION, VEN_USUARIO_PASS
-FROM gd_esquema.Maestra;
-
--- USUARIOS CON MAS DE UN DOMICILIO: 40
-SELECT DISTINCT CLI_USUARIO_NOMBRE, CLI_USUARIO_FECHA_CREACION
-FROM gd_esquema.Maestra 
-WHERE CLI_USUARIO_NOMBRE IS NOT NULL
-GROUP BY CLI_USUARIO_NOMBRE, CLI_USUARIO_FECHA_CREACION
-HAVING COUNT(DISTINCT CLI_USUARIO_DOMICILIO_CALLE) > 1
-
-UNION
-
-SELECT DISTINCT VEN_USUARIO_NOMBRE, VEN_USUARIO_FECHA_CREACION
-FROM gd_esquema.Maestra 
-WHERE VEN_USUARIO_NOMBRE IS NOT NULL
-GROUP BY VEN_USUARIO_NOMBRE, VEN_USUARIO_FECHA_CREACION
-HAVING COUNT(DISTINCT VEN_USUARIO_DOMICILIO_CALLE) > 1;
-
--- CANTIDAD DE DOMICILIOS: 41.387
-SELECT DISTINCT CLI_USUARIO_NOMBRE, CLI_USUARIO_FECHA_CREACION, CLI_USUARIO_PASS, CLI_USUARIO_DOMICILIO_CALLE, CLI_USUARIO_DOMICILIO_CP, CLI_USUARIO_DOMICILIO_DEPTO, CLI_USUARIO_DOMICILIO_LOCALIDAD, CLI_USUARIO_DOMICILIO_NRO_CALLE, CLI_USUARIO_DOMICILIO_NRO_CALLE, CLI_USUARIO_DOMICILIO_PISO, CLI_USUARIO_DOMICILIO_PROVINCIA 
-FROM gd_esquema.Maestra 
-WHERE CLI_USUARIO_NOMBRE IS NOT NULL
-
-UNION
-
-SELECT DISTINCT VEN_USUARIO_NOMBRE, CLI_USUARIO_FECHA_CREACION, CLI_USUARIO_PASS, VEN_USUARIO_DOMICILIO_CALLE, VEN_USUARIO_DOMICILIO_CP, VEN_USUARIO_DOMICILIO_DEPTO, VEN_USUARIO_DOMICILIO_LOCALIDAD, VEN_USUARIO_DOMICILIO_NRO_CALLE, VEN_USUARIO_DOMICILIO_NRO_CALLE, VEN_USUARIO_DOMICILIO_PISO, VEN_USUARIO_DOMICILIO_PROVINCIA 
-FROM gd_esquema.Maestra 
-WHERE VEN_USUARIO_NOMBRE IS NOT NULL;
-
-
-SELECT DISTINCT PRODUCTO_CODIGO, PRODUCTO_DESCRIPCION, PRODUCTO_PRECIO FROM gd_esquema.Maestra -- 6894
-where PRODUCTO_CODIGO = 'Codigo:0131231312'
-
-SELECT * FROM SARTEN_QUE_LADRA.Marca
-
-GO 
-
--- DROP PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PRODUCTO
-
-CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PRODUCTO
-AS BEGIN
-INSERT INTO SARTEN_QUE_LADRA.ProductoX(producto_codigo, producto_descripcion, producto_precio)
-	SELECT PRODUCTO_CODIGO, PRODUCTO_DESCRIPCION, PRODUCTO_PRECIO, PRODUCTO_MARCA
-	from gd_esquema.Maestra
-	WHERE PRODUCTO_CODIGO IS NOT NULL
-
-	PRINT 'Migración completada exitosamente.'
-END
-GO
-
-EXEC SARTEN_QUE_LADRA.MIGRAR_PRODUCTO
-
-SELECT * FROM SARTEN_QUE_LADRA.ProductoX
-
-SELECT DISTINCT 
-	PUBLICACION_CODIGO,
-	PRODUCTO_CODIGO
-FROM gd_esquema.Maestra
-ORDER BY PUBLICACION_CODIGO
-
-SELECT *
-FROM gd_esquema.Maestra
-WHERE PUBLICACION_CODIGO = '556925'
-
-
--- Ojo con esto, si pasa lo de que hay mismos usuarios para distintas personas, ya que estaria perdiendo (creo) el de una persona
-SELECT DISTINCT CLI_USUARIO_NOMBRE, CLI_USUARIO_PASS, CLI_USUARIO_FECHA_CREACION FROM gd_esquema.Maestra
-	WHERE CLI_USUARIO_NOMBRE IS NOT NULL
-UNION
-SELECT DISTINCT VEN_USUARIO_NOMBRE, VEN_USUARIO_PASS, VEN_USUARIO_FECHA_CREACION FROM gd_esquema.Maestra
-	WHERE VEN_USUARIO_NOMBRE IS NOT NULL -- 41.346
-
-SELECT * from SARTEN_QUE_LADRA.Usuario
-
-
-SELECT *
-FROM INFORMATION_SCHEMA.TABLES
-WHERE TABLE_SCHEMA = 'SARTEN_QUE_LADRA'
-
-  SELECT *
-FROM sys.objects
-WHERE name = 'ProductoX'
-  AND type = 'U';  -- 'U' es para tablas de usuario
-
-  SELECT TABLE_SCHEMA, TABLE_NAME
-FROM INFORMATION_SCHEMA.TABLES
-WHERE TABLE_NAME = 'ProductoX';
-
-DROP TABLE SARTEN_QUE_LADRA.ProductoX;
-
-SELECT * FROM SARTEN_QUE_LADRA.Cliente
-
-SELECT DISTINCT CLIENTE_NOMBRE, CLIENTE_APELLIDO, CLIENTE_FECHA_NAC, CLIENTE_MAIL, CLIENTE_DNI,
-	CLI_USUARIO_NOMBRE, CLI_USUARIO_PASS, CLI_USUARIO_FECHA_CREACION
-FROM gd_esquema.Maestra
-WHERE CLIENTE_NOMBRE IS NOT NULL -- 41.298
-
-SELECT * FROM SARTEN_QUE_LADRA.Cliente
-
-SELECT DISTINCT CLIENTE_NOMBRE, CLIENTE_APELLIDO, CLIENTE_FECHA_NAC, CLIENTE_MAIL, CLIENTE_DNI,
-	CLI_USUARIO_NOMBRE, CLI_USUARIO_PASS, CLI_USUARIO_FECHA_CREACION
-FROM gd_esquema.Maestra
-WHERE CLIENTE_NOMBRE IS NOT NULL -- 41.298
-GO
-
-
--- ============================== --
---         CONSTRAINTS            --
--- ============================== --
-
--- FK -> SubrubroXRubro
-ALTER TABLE SARTEN_QUE_LADRA.SubrubroXRubro ADD CONSTRAINT fk_subrubroxrubro_rubro_id FOREIGN KEY (rubro_id) REFERENCES SARTEN_QUE_LADRA.Rubro (rubro_id);
-ALTER TABLE SARTEN_QUE_LADRA.SubrubroXRubro ADD CONSTRAINT fk_subrubroxrubro_subrubro_id FOREIGN KEY (subrubro_id) REFERENCES SARTEN_QUE_LADRA.Subrubro (subrubro_id);
-
--- FK -> ModeloXProducto
-ALTER TABLE SARTEN_QUE_LADRA.ModeloXProducto ADD CONSTRAINT fk_modeloproducto_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto (producto_id);
-ALTER TABLE SARTEN_QUE_LADRA.ModeloXProducto ADD CONSTRAINT fk_modeloproducto_modelo FOREIGN KEY (modelo_id) REFERENCES SARTEN_QUE_LADRA.Modelo (modelo_codigo);
-
--- FK -> MarcaXProducto
-ALTER TABLE SARTEN_QUE_LADRA.MarcaXProducto ADD CONSTRAINT fk_marcaproducto_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto (producto_id);
-ALTER TABLE SARTEN_QUE_LADRA.MarcaXProducto ADD CONSTRAINT fk_marcaproducto_marca FOREIGN KEY (marca_id) REFERENCES SARTEN_QUE_LADRA.Marca (marca_id);
-
--- FK -> ProductoXSubrubro
-ALTER TABLE SARTEN_QUE_LADRA.ProductoXSubrubro ADD CONSTRAINT fk_productosubrubro_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto (producto_id);
-ALTER TABLE SARTEN_QUE_LADRA.ProductoXSubrubro ADD CONSTRAINT fk_productosubrubro_subrubro FOREIGN KEY (subrubro_id) REFERENCES SARTEN_QUE_LADRA.Subrubro (subrubro_id);
-
--- FK -> Localidad
-ALTER TABLE SARTEN_QUE_LADRA.Localidad ADD CONSTRAINT fk_localidad_provincia FOREIGN KEY (provincia_id) REFERENCES SARTEN_QUE_LADRA.Provincia (provincia_id);
-ALTER TABLE SARTEN_QUE_LADRA.Domicilio ADD CONSTRAINT fk_domicilio_localidad FOREIGN KEY (localidad_id) REFERENCES SARTEN_QUE_LADRA.Localidad (localidad_id);
-
--- FK -> DomicilioXUsuario
-ALTER TABLE SARTEN_QUE_LADRA.DomicilioXUsuario ADD CONSTRAINT fk_domiciliousuario_usuario FOREIGN KEY (usuario_id) REFERENCES SARTEN_QUE_LADRA.Usuario (usuario_id);
-ALTER TABLE SARTEN_QUE_LADRA.DomicilioXUsuario ADD CONSTRAINT fk_domiciliousuario_domicilio FOREIGN KEY (domicilio_id) REFERENCES SARTEN_QUE_LADRA.Domicilio (domicilio_id);
-
--- FK -> Cliente
-ALTER TABLE SARTEN_QUE_LADRA.Cliente ADD CONSTRAINT fk_cliente_usuario FOREIGN KEY (usuario_id) REFERENCES SARTEN_QUE_LADRA.Usuario (usuario_id);
-ALTER TABLE SARTEN_QUE_LADRA.Vendedor ADD CONSTRAINT fk_vendedor_usuario FOREIGN KEY (usuario_id) REFERENCES SARTEN_QUE_LADRA.Usuario (usuario_id);
-
--- FK -> Envio
-ALTER TABLE SARTEN_QUE_LADRA.Envio ADD CONSTRAINT fk_envio_venta FOREIGN KEY (venta_codigo) REFERENCES SARTEN_QUE_LADRA.Venta (venta_codigo);
-ALTER TABLE SARTEN_QUE_LADRA.Envio ADD CONSTRAINT fk_envio_domicilio FOREIGN KEY (envio_domicilio) REFERENCES SARTEN_QUE_LADRA.Domicilio (domicilio_id);
-ALTER TABLE SARTEN_QUE_LADRA.Envio ADD CONSTRAINT fk_envio_tipo_envio FOREIGN KEY (tipo_envio_id) REFERENCES SARTEN_QUE_LADRA.TipoEnvio (tipo_envio_id);
-
--- FK -> Factura
-ALTER TABLE SARTEN_QUE_LADRA.Factura ADD CONSTRAINT fk_factura_vendedor FOREIGN KEY (vendedor_id) REFERENCES SARTEN_QUE_LADRA.Vendedor (vendedor_id);
-
--- FK -> Almacen
-ALTER TABLE SARTEN_QUE_LADRA.Almacen ADD CONSTRAINT fk_almacen_localidad FOREIGN KEY (localidad_id) REFERENCES SARTEN_QUE_LADRA.Localidad;
-
--- FK -> Publicacion
-ALTER TABLE SARTEN_QUE_LADRA.Publicacion ADD CONSTRAINT fk_publicacion_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto;
-ALTER TABLE SARTEN_QUE_LADRA.Publicacion ADD CONSTRAINT fk_publicacion_vendedor FOREIGN KEY (vendedor_id) REFERENCES SARTEN_QUE_LADRA.Vendedor;
-ALTER TABLE SARTEN_QUE_LADRA.Publicacion ADD CONSTRAINT fk_publicacion_almacen FOREIGN KEY (almacen_codigo) REFERENCES SARTEN_QUE_LADRA.Almacen;
-
--- FK -> DetalleFactura
-ALTER TABLE SARTEN_QUE_LADRA.DetalleFactura ADD CONSTRAINT fk_detallefactura_publicacion FOREIGN KEY (publicacion_codigo) REFERENCES SARTEN_QUE_LADRA.Publicacion;
-ALTER TABLE SARTEN_QUE_LADRA.DetalleFactura ADD CONSTRAINT fk_detallefactura_concepto FOREIGN KEY (detalle_concepto_id) REFERENCES SARTEN_QUE_LADRA.Concepto;
-ALTER TABLE SARTEN_QUE_LADRA.DetalleFactura ADD CONSTRAINT fk_detallefactura_factura FOREIGN KEY (factura_numero) REFERENCES SARTEN_QUE_LADRA.Factura;
-
--- FK -> DetalleVenta
-ALTER TABLE SARTEN_QUE_LADRA.DetalleVenta ADD CONSTRAINT fk_detalleventa_venta FOREIGN KEY (venta_codigo) REFERENCES SARTEN_QUE_LADRA.Venta;
-ALTER TABLE SARTEN_QUE_LADRA.DetalleVenta ADD CONSTRAINT fk_detalleventa_publicacion FOREIGN KEY (publicacion_codigo) REFERENCES SARTEN_QUE_LADRA.Publicacion;
-
--- FK -> Venta
-ALTER TABLE SARTEN_QUE_LADRA.Venta ADD CONSTRAINT fk_venta_cliente FOREIGN KEY (cliente_id) REFERENCES SARTEN_QUE_LADRA.Cliente;
-
--- FK -> Pago
-ALTER TABLE SARTEN_QUE_LADRA.Pago ADD CONSTRAINT fk_pago_venta FOREIGN KEY (venta_codigo) REFERENCES SARTEN_QUE_LADRA.Venta;
-
--- FK -> MedioXPago
-ALTER TABLE SARTEN_QUE_LADRA.MedioXPago ADD CONSTRAINT fk_mediopago_pago FOREIGN KEY (id_pago) REFERENCES SARTEN_QUE_LADRA.Pago;
-ALTER TABLE SARTEN_QUE_LADRA.MedioXPago ADD CONSTRAINT fk_mediopago_mediodepago FOREIGN KEY (id_medio_de_pago) REFERENCES SARTEN_QUE_LADRA.MedioPago;
-ALTER TABLE SARTEN_QUE_LADRA.MedioXPago ADD CONSTRAINT fk_mediopago_detallepago FOREIGN KEY (id_detalle_pago) REFERENCES SARTEN_QUE_LADRA.DetallePago;
-
--- FK -> MedioPago
-ALTER TABLE SARTEN_QUE_LADRA.MedioPago ADD CONSTRAINT fk_mediopago_tipomediopago FOREIGN KEY (tipo_medio_pago) REFERENCES SARTEN_QUE_LADRA.TipoMedioPago;
-
-GO
+EXEC SARTEN_QUE_LADRA.MIGRAR_MEDIOXPAGO;
