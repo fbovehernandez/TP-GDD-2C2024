@@ -89,6 +89,26 @@ CREATE TABLE SARTEN_QUE_LADRA.Hechos_Venta (
 	venta_total DECIMAL(18,2)
 );
 
+CREATE TABLE SARTEN_QUE_LADRA.BI_Detalle_Factura (
+	detalle_factura_id DECIMAL(18,0),
+	concepto_id DECIMAL(18,0),
+	factura_numero DECIMAL(18,0),
+	detalle_factura_subtotal DECIMAL(18,2),
+	detalle_factura_cantidad DECIMAL(18,0),
+	detalle_factura_precio DECIMAL(18,2),
+	PRIMARY KEY(detalle_factura_id)
+);
+
+CREATE TABLE SARTEN_QUE_LADRA.Hechos_Factura (
+	factura_id DECIMAL(18,0) IDENTITY(1,1),
+	factura_numero DECIMAL(18,0),
+	tiempo_id INT,
+	concepto_id INT,
+	factura_total DECIMAL(18,0),
+	provincia_vendedor_id DECIMAL(18,0),
+	PRIMARY KEY(factura_id)
+);
+
 -- ============================== --
 --         CONSTRAINTS            --
 -- ============================== --
@@ -107,6 +127,8 @@ ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_rango_e
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_tiempo FOREIGN KEY (tiempo_id) REFERENCES SARTEN_QUE_LADRA.BI_Tiempo(tiempo_id);
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_rubro FOREIGN KEY (rubro_id) REFERENCES SARTEN_QUE_LADRA.BI_Rubro(rubro_id);
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_localidad FOREIGN KEY (localidad_cliente_id) REFERENCES SARTEN_QUE_LADRA.BI_Localidad(localidad_id);
+
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Factura ADD CONSTRAINT provincia_vendedor_id FOREIGN KEY (provincia_vendedor_id) REFERENCES SARTEN_QUE_LADRA.BI_Provincia (id);
 
 -- ============================== -- 
 --			FUNCTIONS	          --
@@ -241,6 +263,23 @@ AS BEGIN
 		JOIN SARTEN_QUE_LADRA.Publicacion p ON p.publicacion_codigo = dv.publicacion_codigo
 		JOIN SARTEN_QUE_LADRA.Almacen a ON a.almacen_codigo = p.almacen_codigo
 	WHERE v.venta_codigo = @venta_id
+    RETURN @resultado
+END
+
+GO
+
+CREATE FUNCTION SARTEN_QUE_LADRA.BI_Select_Provincia_Vendedor(@vendedor DECIMAL(18,0))
+RETURNS DECIMAL(18,0)
+AS BEGIN
+    DECLARE @resultado DECIMAL(18,0)
+
+	SELECT DISTINCT @resultado = p.provincia_id
+	FROM SARTEN_QUE_LADRA.Provincia p 
+		JOIN SARTEN_QUE_LADRA.Localidad l ON l.provincia_id = p.provincia_id
+		JOIN SARTEN_QUE_LADRA.Domicilio domicilio ON domicilio.localidad_id = l.localidad_id
+		JOIN SARTEN_QUE_LADRA.DomicilioXUsuario domicilioxusuario ON domicilio.domicilio_id = domicilioxusuario.domicilio_id
+		JOIN SARTEN_QUE_LADRA.Vendedor v ON domicilioxusuario.usuario_id = v.usuario_id
+	WHERE v.vendedor_id = @vendedor
     RETURN @resultado
 END
 
@@ -438,6 +477,26 @@ AS BEGIN
 		JOIN SARTEN_QUE_LADRA.Cliente c ON c.cliente_id = v.cliente_id
 END
 
+GO
+CREATE PROCEDURE SARTEN_QUE_LADRA.Migrar_BI_Detalle_Factura
+AS BEGIN
+    INSERT INTO SARTEN_QUE_LADRA.BI_Detalle_Factura
+		SELECT df.detalle_factura_id, df.detalle_concepto_id, f.factura_numero, df.detalle_factura_subtotal, df.detalle_factura_cantidad, df.detalle_factura_precio
+		FROM SARTEN_QUE_LADRA.DetalleFactura df
+		JOIN SARTEN_QUE_LADRA.Factura f ON f.factura_numero = df.factura_numero
+END
+
+GO
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Factura
+AS BEGIN
+    INSERT INTO SARTEN_QUE_LADRA.Hechos_Factura
+        (factura_numero, tiempo_id, concepto_id, factura_total, provincia_vendedor_id)
+    SELECT DISTINCT df.factura_numero, SARTEN_QUE_LADRA.BI_Select_Tiempo(f.factura_fecha), df.concepto_id, SUM(df.detalle_factura_subtotal), SARTEN_QUE_LADRA.BI_Select_Provincia_Vendedor(f.vendedor_id)
+	FROM SARTEN_QUE_LADRA.BI_Detalle_Factura df 
+	JOIN SARTEN_QUE_LADRA.Factura f ON df.factura_numero = f.factura_numero
+	GROUP BY df.factura_numero, f.factura_fecha, SARTEN_QUE_LADRA.BI_Select_Provincia_Vendedor(f.vendedor_id),df.concepto_id
+END
+
 -- ============================== -- 
 --				EXEC	          --
 -- ============================== --
@@ -453,7 +512,8 @@ EXEC SARTEN_QUE_LADRA.BI_Migrar_Rubro;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Rango_Etario;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Rango_Horario;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Venta;
-
+EXEC SARTEN_QUE_LADRA.Migrar_BI_Detalle_Factura;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Factura;
 -- ============================== -- 
 --				VIEWS	          --
 -- ============================== --
