@@ -267,7 +267,7 @@ en función del total del concepto sobre el total del período.
 
 10. Facturación por provincia. Monto facturado según la provincia del vendedor
 para cada cuatrimestre de cada año
-*/
+*/bv
 
 ALTER TABLE SARTEN_QUE_LADRA.BI_HECHOS_FACTURA DROP CONSTRAINT FK_BI_HECHOS_FACTURA_PROVINCIA;
 DROP TABLE SARTEN_QUE_LADRA.BI_HECHOS_FACTURA
@@ -276,7 +276,7 @@ DROP PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Factura
 CREATE TABLE SARTEN_QUE_LADRA.BI_HECHOS_FACTURA (
 	factura_id DECIMAL(18,0) PRIMARY KEY IDENTITY (1,1),
 	tiempo_id DECIMAL(18,0),
-	id_concepto DECIMAL(18,0),
+	id_concepto DECIMAL(18,0), -- FK
 	total_facturado DECIMAL(18,0),
 	provincia_vendedor_id DECIMAL(18,0),
 )
@@ -409,6 +409,14 @@ CREATE TABLE SARTEN_QUE_LADRA.Hechos_Pago (
 	tipo_medio_pago_id DECIMAL(18,0) --FK
 );
 
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT FK_Hechos_Pago_Localidad_Cliente FOREIGN KEY (localidad_cliente_id) REFERENCES SARTEN_QUE_LADRA.BI_Localidad(localidad_id);
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT FK_Hechos_Pago_Tiempo FOREIGN KEY (tiempo_id)  REFERENCES SARTEN_QUE_LADRA.BI_Tiempo(tiempo_id)
+
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT FK_Hechos_Pago_Medio_De_Pago FOREIGN KEY (medio_pago_id) REFERENCES SARTEN_QUE_LADRA.BI_Medio_De_Pago(medio_pago_id);
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT FK_Hechos_Pago_Tipo_Medio_De_Pago FOREIGN KEY (tipo_medio_pago_id) REFERENCES SARTEN_QUE_LADRA.BI_Tipo_Medio_De_Pago(tipo_medio_pago_id);
+
+
+GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Medio_De_Pago
 AS BEGIN
     INSERT INTO SARTEN_QUE_LADRA.BI_Medio_De_Pago
@@ -434,25 +442,91 @@ SELECT * FROM SARTEN_QUE_LADRA.BI_Tipo_Medio_De_Pago
 
 GO
 
+DROP PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Pago
+
+GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Pago
 AS BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.Hechos_Pago
-		(pago_id, localidad_cliente_id, detalle_pago_cuotas, tiempo_id, medio_pago_id, venta_id, tipo_medio_pago_id)
-	SELECT DISTINCT pago.id_pago, SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente_Segun_Cantidad_De_Domicilios(venta.cliente_id, envio.envio_numero), detallepago.detalle_pago_cuotas, SARTEN_QUE_LADRA.BI_Select_Tiempo(pago.pago_fecha), medioxpago.id_medio_de_pago, pago.venta_codigo, tipomediopago.id_medio_pago
+		(localidad_cliente_id, tiempo_id, medio_pago_id, tipo_medio_pago_id, importe_cuotas)
+	SELECT DISTINCT 
+				SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente_Segun_Cantidad_De_Domicilios(venta.cliente_id, envio.envio_numero), 
+				SARTEN_QUE_LADRA.BI_Select_Tiempo(pago.pago_fecha),
+				medioxpago.id_medio_de_pago, 
+				tipomediopago.id_medio_pago,
+				SUM(pago.pago_importe * detallepago.detalle_pago_cuotas)
 	FROM SARTEN_QUE_LADRA.Pago pago JOIN SARTEN_QUE_LADRA.Venta venta ON pago.venta_codigo = venta.venta_codigo
+									JOIN SARTEN_QUE_LADRA.Envio envio ON pago.venta_codigo = envio.venta_codigo
+									-- 
 									JOIN SARTEN_QUE_LADRA.MedioXPago medioxpago ON pago.id_pago = medioxpago.id_pago
 									JOIN SARTEN_QUE_LADRA.DetallePago detallepago ON medioxpago.id_detalle_pago = detallepago.detalle_pago_id
 									JOIN SARTEN_QUE_LADRA.MedioPago mediopago ON medioxpago.id_medio_de_pago = mediopago.id_medio_de_pago
 									JOIN SARTEN_QUE_LADRA.TipoMedioPago tipomediopago ON mediopago.tipo_medio_pago = tipomediopago.id_medio_pago
-									JOIN SARTEN_QUE_LADRA.Envio envio ON pago.venta_codigo = envio.venta_codigo
+	WHERE detallepago.detalle_pago_cuotas > 1 -- De todas formas ninguna parece ser = 1
+	GROUP BY SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente_Segun_Cantidad_De_Domicilios(venta.cliente_id, envio.envio_numero), 
+			 SARTEN_QUE_LADRA.BI_Select_Tiempo(pago.pago_fecha),		
+			 medioxpago.id_medio_de_pago, 
+			 tipomediopago.id_medio_pago
 END
+
+SELECT * FROM SARTEN_QUE_LADRA.MedioXPago
+SELECT * FROM SARTEN_QUE_LADRA.MedioPago
+SELECT * FROM SARTEN_QUE_LADRA.TipoMedioPago
+
+SELECT * FROM SARTEN_QUE_LADRA.Hechos_Pago
+
+/* TEST VALIDACION AGRUPAMIENTO MASIVO --> CASO ID 33 */
+
+SELECT  
+				l.localidad_id,
+				YEAR(pago.pago_fecha),
+				MONTH(pago.pago_fecha),
+				medioxpago.id_medio_de_pago, 
+				tipomediopago.id_medio_pago,
+				detallepago.detalle_pago_cuotas,
+				pago.pago_importe
+	FROM SARTEN_QUE_LADRA.Pago pago JOIN SARTEN_QUE_LADRA.Venta venta ON pago.venta_codigo = venta.venta_codigo
+									JOIN SARTEN_QUE_LADRA.Envio envio ON pago.venta_codigo = envio.venta_codigo
+									JOIN SARTEN_QUE_LADRA.Cliente c ON c.cliente_id = venta.cliente_id
+									JOIN SARTEN_QUE_LADRA.DomicilioXUsuario dxu ON dxu.usuario_id = c.usuario_id
+									JOIN SARTEN_QUE_LADRA.Domicilio dm ON dm.domicilio_id = dxu.domicilio_id
+									JOIN SARTEN_QUE_LADRA.Localidad l ON l.localidad_id = dm.localidad_id
+									JOIN SARTEN_QUE_LADRA.MedioXPago medioxpago ON pago.id_pago = medioxpago.id_pago
+									JOIN SARTEN_QUE_LADRA.DetallePago detallepago ON medioxpago.id_detalle_pago = detallepago.detalle_pago_id
+									JOIN SARTEN_QUE_LADRA.MedioPago mediopago ON medioxpago.id_medio_de_pago = mediopago.id_medio_de_pago
+									JOIN SARTEN_QUE_LADRA.TipoMedioPago tipomediopago ON mediopago.tipo_medio_pago = tipomediopago.id_medio_pago
+	WHERE l.localidad_id = 10243 AND YEAR(pago.pago_fecha) = 2025 AND MONTH(pago.pago_fecha) = 1 AND medioxpago.id_medio_de_pago = 1 AND tipomediopago.id_medio_pago = 1
+
+/* Diferentes filas que cuando se agrupan en la de hechos lo hacen como una sola...
+		10243	2025	1	1	1	12310.91
+		10243	2025	1	1	1	17047.98
+		10243	2025	1	1	1	7902.67
+*/ 
+
+/* PARA SELECCION DE TIEMPOS ID */
+SELECT tiempo_id, mes, anio FROM SARTEN_QUE_LADRA.BI_Tiempo
 
 /* 6. Pago en Cuotas. Las 3 localidades con el mayor importe de pagos en cuotas,
 según el medio de pago, mes y año. Se calcula sumando los importes totales de
 todas las ventas en cuotas. Se toma la localidad del cliente (Si tiene más de una
 dirección se toma a la que seleccionó el envío) */
 
+GO
+CREATE VIEW SARTEN_QUE_LADRA.VIEW6ajdsdsaj
 
+AS
+	SELECT TOP 3 hp.localidad_cliente_id, t.mes, t.anio, mdp.medio_pago, SUM(hp.importe_cuotas) 
+			AS 'Importe por cuotas'
+	FROM SARTEN_QUE_LADRA.Hechos_Pago hp 
+		JOIN SARTEN_QUE_LADRA.BI_Tiempo t ON hp.tiempo_id = t.tiempo_id
+		JOIN SARTEN_QUE_LADRA.BI_Localidad l ON hp.localidad_cliente_id = l.localidad_id
+		JOIN SARTEN_QUE_LADRA.BI_Medio_De_Pago mdp ON mdp.medio_pago_id = hp.medio_pago_id
+	GROUP BY hp.localidad_cliente_id, t.mes, t.anio, mdp.medio_pago
+	ORDER BY SUM(hp.importe_cuotas) DESC
 
-SELECT * FROM SARTEN_QUE_LADRA.Pago p JOIN SARTEN_QUE_LADRA.MedioXPago mxp ON mxp.id_pago = p.id_pago
-LEFT JOIN SARTEN_QUE_LADRA.DetallePago dp ON dp.detalle_pago_id = mxp.id_detalle_pago
+SELECT * from SARTEN_QUE_LADRA.MedioPago
+SELECT * FROM SARTEN_QUE_LADRA.VIEW6
+
+-- TENGO QUE RE-PROBAR TODO ESTO POR EL TEMA DE LAS CUOTAS.
+
+/***** VENTAS *****/
