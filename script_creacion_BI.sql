@@ -619,7 +619,7 @@ las mismas.
 
 CREATE VIEW SARTEN_QUE_LADRA.VENTA_PROMEDIO_MENSUAL
 AS
-	SELECT DISTINCT anio 'año', mes, provincia_nombre, SUM(venta_total) / COUNT(DISTINCT venta_total) 'Venta Promedio Mensual Según Provincia'
+	SELECT DISTINCT anio 'año', mes, provincia_nombre, SUM(venta_total) / COUNT(venta_id) 'Venta Promedio Mensual Según Provincia'
 	FROM SARTEN_QUE_LADRA.Hechos_Venta venta
 		JOIN SARTEN_QUE_LADRA.BI_Provincia provincia ON venta.provincia_almacen_id = provincia.provincia_id
 		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON venta.tiempo_id = tiempo.tiempo_id
@@ -631,71 +631,46 @@ GO
 /*
 4. Rendimiento de rubros. Los 5 rubros con mayores ventas para cada
 cuatrimestre de cada año según la localidad y rango etario de los clientes.
-
-TODO: Todo.
 */
 
-/*
 CREATE VIEW SARTEN_QUE_LADRA.RENDIMIENTO_DE_RUBROS
 AS
-	SELECT s.state,s.sname, i.stock_num, pt.description, 
-       SUM(i.quantity) as cant_unidades_vendidas 
-	  FROM items i INNER JOIN manufact m ON m.manu_code = i.manu_code
-				   INNER JOIN state s ON s.state = m.state
-				   INNER JOIN product_types pt ON pt.stock_num = i.stock_num
-	 WHERE i.stock_num = (SELECT TOP 1 i1.stock_num 
-							FROM items i1 INNER JOIN manufact m1
-												ON m1.manu_code = i1.manu_code
-								WHERE m1.state = s.state
-								GROUP BY i1.stock_num ORDER BY SUM(i1.quantity) DESC)
-	GROUP BY s.state,s.sname, i.stock_num, pt.description
-	ORDER BY s.sname;
-
-	SELECT rubro_descripcion, anio, cuatrimestre, localidad_nombre, rango_etario, COUNT(ventas.venta_id) cantidad_ventas
+	SELECT 
+		rubro.rubro_descripcion, 
+		tiempo.anio, 
+		tiempo.cuatrimestre, 
+		localidad.localidad_nombre, 
+		rangoEtario.rango_etario, 
+		SUM(ventas.venta_total) AS cantidad_ventas
 	FROM SARTEN_QUE_LADRA.BI_Rubro rubro
 		JOIN SARTEN_QUE_LADRA.Hechos_Venta ventas ON ventas.rubro_id = rubro.rubro_id
 		JOIN SARTEN_QUE_LADRA.BI_Localidad localidad ON localidad.localidad_id = ventas.localidad_cliente_id
 		JOIN SARTEN_QUE_LADRA.BI_Rango_Etario rangoEtario ON rangoEtario.rango_etario_id = ventas.rango_etario_cliente
 		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON tiempo.tiempo_id = ventas.tiempo_id
-	WHERE ventas.venta_id IN
-	GROUP BY rubro_descripcion, anio, cuatrimestre, localidad_nombre, rango_etario
-	ORDER BY rubro_descripcion, anio, cuatrimestre, localidad_nombre, rango_etario;
-
-
-	--------------------- Mayores ventas para un cuatrimestre
-	SELECT anio, cuatrimestre, localidad_nombre, rango_etario, COUNT(venta_id) cantidad_ventas
-	FROM SARTEN_QUE_LADRA.Hechos_Venta venta
-		JOIN SARTEN_QUE_LADRA.BI_Localidad localidad ON localidad.localidad_id = venta.localidad_cliente_id
-		JOIN SARTEN_QUE_LADRA.BI_Rango_Etario rangoEtario ON rangoEtario.rango_etario_id = venta.rango_etario_cliente
-		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON tiempo.tiempo_id = venta.tiempo_id 
-	GROUP BY anio, cuatrimestre, localidad_nombre, rango_etario
-	ORDER BY COUNT(venta_id), anio, cuatrimestre, localidad_nombre, rango_etario DESC;
-
-	SELECT rubro_descripcion, anio, cuatrimestre, localidad_nombre, rango_etario, COUNT(venta_id) cantidad_ventas
-	FROM SARTEN_QUE_LADRA.Hechos_Venta venta
-		JOIN SARTEN_QUE_LADRA.BI_Localidad localidad ON localidad.localidad_id = venta.localidad_cliente_id
-		JOIN SARTEN_QUE_LADRA.BI_Rango_Etario rangoEtario ON rangoEtario.rango_etario_id = venta.rango_etario_cliente
-		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON tiempo.tiempo_id = venta.tiempo_id
-		JOIN SARTEN_QUE_LADRA.BI_Rubro rubro ON rubro.rubro_id = venta.rubro_id
-	WHERE venta.rubro_id IN (SELECT TOP 5 rubro2.rubro_id
-							FROM SARTEN_QUE_LADRA.BI_Rubro rubro2
-								JOIN SARTEN_QUE_LADRA.Hechos_Venta venta2 ON venta2.rubro_id = rubro2.rubro_id
-								JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo2 ON tiempo2.tiempo_id = venta2.tiempo_id
-							GROUP BY rubro2.rubro_id, venta2.localidad_cliente_id, venta2.rango_etario_cliente, anio, cuatrimestre
-							ORDER BY COUNT(venta_id) DESC)
-	GROUP BY rubro_descripcion, rango_etario, anio, cuatrimestre, localidad_nombre
-	ORDER BY COUNT(venta_id), anio, cuatrimestre;
-
-	/*
-	SELECT rubro_descripcion, COUNT(venta.venta_id) cantidad_de_ventas, cuatrimestre, localidad.localidad_nombre, rango_etario
-	FROM SARTEN_QUE_LADRA.Hechos_Venta venta 
-		JOIN SARTEN_QUE_LADRA.BI_VentaXRubro vxr ON venta.venta_id = vxr.venta_id
-		JOIN SARTEN_QUE_LADRA.BI_Rubro rubro ON vxr.rubro_id = rubro.rubro_id
-		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON venta.venta_id = tiempo.tiempo_id
-		JOIN SARTEN_QUE_LADRA.BI_Rango_Etario rango_etario ON venta.rango_etario_cliente = rango_etario.rango_etario_id
-		JOIN SARTEN_QUE_LADRA.BI_Localidad localidad ON venta.localidad_cliente_id = localidad.localidad_id
-		*/
-	*/
+	WHERE ventas.venta_id IN (
+        SELECT TOP 5 ventas2.venta_id
+        FROM SARTEN_QUE_LADRA.Hechos_Venta ventas2
+        WHERE ventas2.localidad_cliente_id = localidad.localidad_id 
+            AND ventas2.rango_etario_cliente = rangoEtario.rango_etario_id
+            AND ventas2.tiempo_id = tiempo.tiempo_id
+        GROUP BY 
+            ventas2.venta_id
+        ORDER BY 
+            SUM(ventas2.venta_total) DESC
+    )
+	GROUP BY 
+		rubro.rubro_descripcion,
+		tiempo.anio, 
+		tiempo.cuatrimestre, 
+		localidad.localidad_nombre, 
+		rangoEtario.rango_etario
+	ORDER BY 
+		rubro.rubro_descripcion, 
+		tiempo.anio, 
+		tiempo.cuatrimestre, 
+		localidad.localidad_nombre, 
+		rangoEtario.rango_etario;
+	
 GO
 
 /* 
