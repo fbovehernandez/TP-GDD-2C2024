@@ -41,12 +41,11 @@ CREATE TABLE SARTEN_QUE_LADRA.BI_Tipo_Medio_De_Pago (
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.Hechos_Pago (
-	pago_id DECIMAL(18,0) PRIMARY KEY,
+	pago_id DECIMAL(18,0) PRIMARY KEY IDENTITY(1,1),
 	localidad_cliente_id DECIMAL(18,0), --FK
-	detalle_pago_cuotas DECIMAL(18,0),
 	tiempo_id DECIMAL(18,0), --FK
 	medio_pago_id DECIMAL(18,0), --FK
-	venta_id DECIMAL(18,0), --FK
+	importe_cuotas DECIMAL(18,0),
 	tipo_medio_pago_id DECIMAL(18,0) --FK
 );
 
@@ -113,7 +112,7 @@ ALTER TABLE SARTEN_QUE_LADRA.Hechos_Publicacion ADD CONSTRAINT fk_hechos_publica
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_provincia FOREIGN KEY (provincia_almacen_id) REFERENCES SARTEN_QUE_LADRA.BI_Provincia(provincia_id);
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_rango_etario FOREIGN KEY (rango_etario_cliente) REFERENCES SARTEN_QUE_LADRA.BI_Rango_Etario(rango_etario_id);
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_tiempo FOREIGN KEY (tiempo_id) REFERENCES SARTEN_QUE_LADRA.BI_Tiempo(tiempo_id);
-ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_rubro FOREIGN KEY (rubro_id) REFERENCES SARTEN_QUE_LADRA.BI_Rubro(rubro_id);
+--ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_rubro FOREIGN KEY (rubro_id) REFERENCES SARTEN_QUE_LADRA.BI_Rubro(rubro_id);
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_localidad FOREIGN KEY (localidad_cliente_id) REFERENCES SARTEN_QUE_LADRA.BI_Localidad(localidad_id);
 
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Factura ADD CONSTRAINT fk_factura_tiempo FOREIGN KEY (tiempo_id) REFERENCES SARTEN_QUE_LADRA.BI_Tiempo (tiempo_id);
@@ -277,7 +276,7 @@ END
 --      STORED PROCEDURES         --
 -- ============================== --
 
-GO
+GOM
 
 CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Localidad
 AS BEGIN
@@ -346,20 +345,25 @@ GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Pago
 AS BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.Hechos_Pago
-		(pago_id,
-		localidad_cliente_id,
-		detalle_pago_cuotas,
-		tiempo_id,
-		medio_pago_id,
-		venta_id,
-		tipo_medio_pago_id)
-	SELECT DISTINCT pago.id_pago, SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente_Segun_Cantidad_De_Domicilios(venta.cliente_id, envio.envio_numero), detallepago.detalle_pago_cuotas, SARTEN_QUE_LADRA.BI_Select_Tiempo(pago.pago_fecha), medioxpago.id_medio_de_pago, pago.venta_codigo, tipomediopago.id_medio_pago
+		(localidad_cliente_id, tiempo_id, medio_pago_id, tipo_medio_pago_id, importe_cuotas)
+	SELECT DISTINCT 
+				SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente_Segun_Cantidad_De_Domicilios(venta.cliente_id, envio.envio_numero), 
+				SARTEN_QUE_LADRA.BI_Select_Tiempo(pago.pago_fecha),
+				medioxpago.id_medio_de_pago, 
+				tipomediopago.id_medio_pago,
+				SUM(pago.pago_importe * detallepago.detalle_pago_cuotas)
 	FROM SARTEN_QUE_LADRA.Pago pago JOIN SARTEN_QUE_LADRA.Venta venta ON pago.venta_codigo = venta.venta_codigo
+									JOIN SARTEN_QUE_LADRA.Envio envio ON pago.venta_codigo = envio.venta_codigo
+									-- 
 									JOIN SARTEN_QUE_LADRA.MedioXPago medioxpago ON pago.id_pago = medioxpago.id_pago
 									JOIN SARTEN_QUE_LADRA.DetallePago detallepago ON medioxpago.id_detalle_pago = detallepago.detalle_pago_id
 									JOIN SARTEN_QUE_LADRA.MedioPago mediopago ON medioxpago.id_medio_de_pago = mediopago.id_medio_de_pago
 									JOIN SARTEN_QUE_LADRA.TipoMedioPago tipomediopago ON mediopago.tipo_medio_pago = tipomediopago.id_medio_pago
-									JOIN SARTEN_QUE_LADRA.Envio envio ON pago.venta_codigo = envio.venta_codigo
+	WHERE detallepago.detalle_pago_cuotas > 1 -- De todas formas ninguna parece ser = 1
+	GROUP BY SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente_Segun_Cantidad_De_Domicilios(venta.cliente_id, envio.envio_numero), 
+			 SARTEN_QUE_LADRA.BI_Select_Tiempo(pago.pago_fecha),		
+			 medioxpago.id_medio_de_pago, 
+			 tipomediopago.id_medio_pago
 END
 
 GO
@@ -632,6 +636,38 @@ AS
 		JOIN SARTEN_QUE_LADRA.BI_Localidad localidad ON venta.localidad_cliente_id = localidad.localidad_id
 		*/
 	*/
+GO
+
+/* 
+7. Porcentaje de cumplimiento de envíos en los tiempos programados por
+provincia (del almacén) por año/mes (desvío). Se calcula teniendo en cuenta los
+envíos cumplidos sobre el total de envíos para el período. 
+*/
+
+CREATE VIEW SARTEN_QUE_LADRA.PORCENTAJE_ENVIOS_A_TIEMPO
+AS
+    SELECT SUM(e.enviados_a_tiempo) * 100 / SUM(e.total_enviados) AS 'Porcentaje de cumplimiento', 
+			t.mes AS 'Mes', t.anio AS 'Año', e.provincia_almacen_id 'Provincia Almacen'
+    FROM SARTEN_QUE_LADRA.Hechos_Envio e
+    JOIN SARTEN_QUE_LADRA.BI_TIEMPO t ON e.tiempo_id = t.tiempo_id
+	JOIN SARTEN_QUE_LADRA.BI_Provincia p ON p.provincia_id = e.provincia_almacen_id
+    GROUP BY t.mes, t.anio, e.provincia_almacen_id
+
+GO
+
+/* 
+8. Localidades que pagan mayor costo de envío. Las 5 localidades (tomando la
+localidad del cliente) con mayor costo de envío. 
+*/
+
+CREATE VIEW SARTEN_QUE_LADRA.LOCALIDADES_MAS_PAGAS
+AS
+	SELECT TOP 5 e.loc_cliente_id, SUM(e.costo_envios) AS 'Costos de envio' 
+	FROM SARTEN_QUE_LADRA.Hechos_Envio e
+	JOIN SARTEN_QUE_LADRA.BI_Localidad l ON e.loc_cliente_id = l.localidad_id
+	GROUP BY e.loc_cliente_id
+	ORDER BY SUM(e.costo_envios) DESC
+
 GO
 
 /*
