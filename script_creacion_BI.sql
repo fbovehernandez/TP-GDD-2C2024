@@ -63,7 +63,7 @@ CREATE TABLE SARTEN_QUE_LADRA.BI_Marca (
 CREATE TABLE SARTEN_QUE_LADRA.Hechos_Publicacion (
 	publicacion_id DECIMAL(18,0) PRIMARY KEY,
 	publicacion_subrubro_id DECIMAL(18,0),
-	tiempo_publicada_id DECIMAL(18,0),
+	dias_publicada DECIMAL(18,0),
 	marca_id DECIMAL(18,0)
 );
 
@@ -89,24 +89,12 @@ CREATE TABLE SARTEN_QUE_LADRA.Hechos_Venta (
 	venta_total DECIMAL(18,2)
 );
 
-CREATE TABLE SARTEN_QUE_LADRA.BI_Detalle_Factura (
-	detalle_factura_id DECIMAL(18,0),
-	concepto_id DECIMAL(18,0),
-	factura_numero DECIMAL(18,0),
-	detalle_factura_subtotal DECIMAL(18,2),
-	detalle_factura_cantidad DECIMAL(18,0),
-	detalle_factura_precio DECIMAL(18,2),
-	PRIMARY KEY(detalle_factura_id)
-);
-
 CREATE TABLE SARTEN_QUE_LADRA.Hechos_Factura (
-	factura_id DECIMAL(18,0) IDENTITY(1,1),
-	factura_numero DECIMAL(18,0),
-	tiempo_id INT,
-	concepto_id INT,
-	factura_total DECIMAL(18,0),
+	factura_id DECIMAL(18,0) PRIMARY KEY IDENTITY (1,1),
+	tiempo_id DECIMAL(18,0),
+	id_concepto DECIMAL(18,0),
+	total_facturado DECIMAL(18,0),
 	provincia_vendedor_id DECIMAL(18,0),
-	PRIMARY KEY(factura_id)
 );
 
 -- ============================== --
@@ -128,7 +116,9 @@ ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_tiempo 
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_rubro FOREIGN KEY (rubro_id) REFERENCES SARTEN_QUE_LADRA.BI_Rubro(rubro_id);
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_localidad FOREIGN KEY (localidad_cliente_id) REFERENCES SARTEN_QUE_LADRA.BI_Localidad(localidad_id);
 
-ALTER TABLE SARTEN_QUE_LADRA.Hechos_Factura ADD CONSTRAINT provincia_vendedor_id FOREIGN KEY (provincia_vendedor_id) REFERENCES SARTEN_QUE_LADRA.BI_Provincia (id);
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Factura ADD CONSTRAINT fk_factura_tiempo FOREIGN KEY (tiempo_id) REFERENCES SARTEN_QUE_LADRA.BI_Tiempo (tiempo_id);
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Factura ADD CONSTRAINT fk_factura_concepto FOREIGN KEY (id_concepto) REFERENCES SARTEN_QUE_LADRA.BI_Concepto (id_concepto);
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Factura ADD CONSTRAINT fk_factura_provincia FOREIGN KEY (provincia_vendedor_id) REFERENCES SARTEN_QUE_LADRA.BI_Provincia (provincia_id);
 
 -- ============================== -- 
 --			FUNCTIONS	          --
@@ -394,11 +384,11 @@ END
 
 GO
 
-CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Publicacion_Sin_Tiempo
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Publicacion
 AS
 BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Hechos_Publicacion (publicacion_id, publicacion_subrubro_id, marca_id)
-	SELECT p.publicacion_codigo, prXs.subrubro_id, mXpr.marca_id
+	INSERT INTO SARTEN_QUE_LADRA.Hechos_Publicacion (publicacion_id, publicacion_subrubro_id,dias_publicada , marca_id)
+	SELECT p.publicacion_codigo, prXs.subrubro_id, DATEDIFF(day, p.publicacion_fecha_inicio, p.publicacion_fecha_fin), mXpr.marca_id 
 	FROM SARTEN_QUE_LADRA.Publicacion p JOIN SARTEN_QUE_LADRA.Producto pr ON (p.producto_id = pr.producto_id)
 										JOIN SARTEN_QUE_LADRA.ProductoXSubrubro prXs ON (prXs.producto_id = pr.producto_id)
 										JOIN SARTEN_QUE_LADRA.MarcaXProducto mXpr ON (mXpr.producto_id = pr.producto_id)
@@ -464,9 +454,13 @@ CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Venta
 AS BEGIN
     INSERT INTO SARTEN_QUE_LADRA.Hechos_Venta
         (venta_codigo, provincia_almacen_id, tiempo_id, rubro_id, localidad_cliente_id,	rango_etario_cliente, rango_horario_id, venta_total)
-    SELECT DISTINCT v.venta_codigo, SARTEN_QUE_LADRA.BI_Select_Provincia_Almacen(SARTEN_QUE_LADRA.BI_Select_Almacen_Venta(v.venta_codigo)), 
-		SARTEN_QUE_LADRA.BI_Select_Tiempo(v.venta_fecha), rubro_id, SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente(v.cliente_id), 
-		SARTEN_QUE_LADRA.BI_Select_Rango_Etario(c.cliente_fecha_nac), SARTEN_QUE_LADRA.BI_Select_Rango_Horario(v.venta_hora), v.venta_total
+    SELECT DISTINCT v.venta_codigo, 
+		SARTEN_QUE_LADRA.BI_Select_Provincia_Almacen(SARTEN_QUE_LADRA.BI_Select_Almacen_Venta(v.venta_codigo)), 
+		SARTEN_QUE_LADRA.BI_Select_Tiempo(v.venta_fecha), 
+		rubro_id, 
+		SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente(v.cliente_id), 
+		SARTEN_QUE_LADRA.BI_Select_Rango_Etario(c.cliente_fecha_nac), 
+		SARTEN_QUE_LADRA.BI_Select_Rango_Horario(v.venta_hora), v.venta_total
 	FROM SARTEN_QUE_LADRA.Venta v
 		JOIN SARTEN_QUE_LADRA.DetalleVenta dv ON v.venta_codigo = dv.venta_codigo
 		JOIN SARTEN_QUE_LADRA.Publicacion publicacion ON publicacion.publicacion_codigo = dv.publicacion_codigo
@@ -478,23 +472,55 @@ AS BEGIN
 END
 
 GO
-CREATE PROCEDURE SARTEN_QUE_LADRA.Migrar_BI_Detalle_Factura
-AS BEGIN
-    INSERT INTO SARTEN_QUE_LADRA.BI_Detalle_Factura
-		SELECT df.detalle_factura_id, df.detalle_concepto_id, f.factura_numero, df.detalle_factura_subtotal, df.detalle_factura_cantidad, df.detalle_factura_precio
-		FROM SARTEN_QUE_LADRA.DetalleFactura df
-		JOIN SARTEN_QUE_LADRA.Factura f ON f.factura_numero = df.factura_numero
-END
+
+/*
+SON TODOS SELECT, ESTO NO VA.
+*/
+SELECT DISTINCT venta.venta_codigo, COUNT(rubro_id)
+	FROM SARTEN_QUE_LADRA.Venta venta 
+		JOIN SARTEN_QUE_LADRA.DetalleVenta detalleVenta ON detalleVenta.venta_codigo = venta.venta_codigo
+		JOIN SARTEN_QUE_LADRA.Publicacion publicacion ON publicacion.publicacion_codigo = detalleVenta.publicacion_codigo
+		JOIN SARTEN_QUE_LADRA.Producto producto ON producto.producto_id = publicacion.producto_id
+		JOIN SARTEN_QUE_LADRA.ProductoXSubrubro pxs ON pxs.producto_id = producto.producto_id
+		JOIN SARTEN_QUE_LADRA.Subrubro subrubro ON subrubro.subrubro_id = pxs.subrubro_id
+		JOIN SARTEN_QUE_LADRA.SubrubroXRubro sxr ON sxr.subrubro_id = subrubro.subrubro_id
+GROUP BY venta.venta_codigo;
+
+		------------------------
+	SELECT DISTINCT venta.venta_codigo, rubro_id
+	FROM SARTEN_QUE_LADRA.Venta venta 
+		JOIN SARTEN_QUE_LADRA.DetalleVenta detalleVenta ON detalleVenta.venta_codigo = venta.venta_codigo
+		JOIN SARTEN_QUE_LADRA.Publicacion publicacion ON publicacion.publicacion_codigo = detalleVenta.publicacion_codigo
+		JOIN SARTEN_QUE_LADRA.Producto producto ON producto.producto_id = publicacion.producto_id
+		JOIN SARTEN_QUE_LADRA.ProductoXSubrubro pxs ON pxs.producto_id = producto.producto_id
+		JOIN SARTEN_QUE_LADRA.Subrubro subrubro ON subrubro.subrubro_id = pxs.subrubro_id
+		JOIN SARTEN_QUE_LADRA.SubrubroXRubro sxr ON sxr.subrubro_id = subrubro.subrubro_id;
+
+	SELECT DISTINCT producto_codigo, rubro_id
+	FROM SARTEN_QUE_LADRA.Producto producto
+		JOIN SARTEN_QUE_LADRA.ProductoXSubrubro pxs ON pxs.producto_id = producto.producto_id
+		JOIN SARTEN_QUE_LADRA.Subrubro subrubro ON subrubro.subrubro_id = pxs.subrubro_id
+		JOIN SARTEN_QUE_LADRA.SubrubroXRubro sxr ON sxr.subrubro_id = subrubro.subrubro_id
+	WHERE producto.producto_codigo LIKE 'Codigo:0131231312'
+	ORDER BY producto_codigo;
 
 GO
+
 CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Factura
 AS BEGIN
-    INSERT INTO SARTEN_QUE_LADRA.Hechos_Factura
-        (factura_numero, tiempo_id, concepto_id, factura_total, provincia_vendedor_id)
-    SELECT DISTINCT df.factura_numero, SARTEN_QUE_LADRA.BI_Select_Tiempo(f.factura_fecha), df.concepto_id, SUM(df.detalle_factura_subtotal), SARTEN_QUE_LADRA.BI_Select_Provincia_Vendedor(f.vendedor_id)
-	FROM SARTEN_QUE_LADRA.BI_Detalle_Factura df 
+    INSERT INTO SARTEN_QUE_LADRA.Hechos_Factura (
+		tiempo_id, id_concepto, total_facturado, provincia_vendedor_id)
+    SELECT DISTINCT  
+		SARTEN_QUE_LADRA.BI_Select_Tiempo(f.factura_fecha), 
+		df.detalle_concepto_id,
+		SUM(df.detalle_factura_subtotal),
+		SARTEN_QUE_LADRA.BI_Select_Provincia_Vendedor(f.vendedor_id)
+	FROM SARTEN_QUE_LADRA.DetalleFactura df 
 	JOIN SARTEN_QUE_LADRA.Factura f ON df.factura_numero = f.factura_numero
-	GROUP BY df.factura_numero, f.factura_fecha, SARTEN_QUE_LADRA.BI_Select_Provincia_Vendedor(f.vendedor_id),df.concepto_id
+	JOIN SARTEN_QUE_LADRA.Concepto cf ON cf.detalle_concepto_id = df.detalle_concepto_id
+	GROUP BY  SARTEN_QUE_LADRA.BI_Select_Tiempo(f.factura_fecha),
+			  SARTEN_QUE_LADRA.BI_Select_Provincia_Vendedor(f.vendedor_id),
+			  df.detalle_concepto_id
 END
 
 -- ============================== -- 
@@ -511,9 +537,11 @@ EXEC SARTEN_QUE_LADRA.BI_Migrar_Pago;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Rubro;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Rango_Etario;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Rango_Horario;
-EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Venta;
-EXEC SARTEN_QUE_LADRA.Migrar_BI_Detalle_Factura;
+-- EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Venta;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Factura;
+
+GO
+
 -- ============================== -- 
 --				VIEWS	          --
 -- ============================== --
@@ -523,29 +551,78 @@ EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Factura;
 provincia correspondiente a la ubicación del almacén para cada mes de cada año
 Se calcula en función de la sumatoria del importe de las ventas sobre el total de
 las mismas.
-
-TODO: Que funcione.
 */
-GO
 
 CREATE VIEW SARTEN_QUE_LADRA.VENTA_PROMEDIO_MENSUAL
 AS
-	SELECT provincia_nombre, mes, anio 'año', SUM(venta_total) / COUNT(DISTINCT venta_total) 'Venta Promedio Mensual Según Provincia'
+	SELECT DISTINCT anio 'año', mes, provincia_nombre, SUM(venta_total) / COUNT(DISTINCT venta_total) 'Venta Promedio Mensual Según Provincia'
 	FROM SARTEN_QUE_LADRA.Hechos_Venta venta
 		JOIN SARTEN_QUE_LADRA.BI_Provincia provincia ON venta.provincia_almacen_id = provincia.provincia_id
 		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON venta.tiempo_id = tiempo.tiempo_id
-	GROUP BY provincia_id, mes, anio
+	GROUP BY provincia_nombre, mes, anio
+	ORDER BY anio, mes, provincia_nombre;
+
+GO
 
 /*
 4. Rendimiento de rubros. Los 5 rubros con mayores ventas para cada
 cuatrimestre de cada año según la localidad y rango etario de los clientes.
 
-TODO: Revisar porque ya no existe VentaXRubro.
+TODO: Todo.
 */
-GO
 
+/*
 CREATE VIEW SARTEN_QUE_LADRA.RENDIMIENTO_DE_RUBROS
 AS
+	SELECT s.state,s.sname, i.stock_num, pt.description, 
+       SUM(i.quantity) as cant_unidades_vendidas 
+	  FROM items i INNER JOIN manufact m ON m.manu_code = i.manu_code
+				   INNER JOIN state s ON s.state = m.state
+				   INNER JOIN product_types pt ON pt.stock_num = i.stock_num
+	 WHERE i.stock_num = (SELECT TOP 1 i1.stock_num 
+							FROM items i1 INNER JOIN manufact m1
+												ON m1.manu_code = i1.manu_code
+								WHERE m1.state = s.state
+								GROUP BY i1.stock_num ORDER BY SUM(i1.quantity) DESC)
+	GROUP BY s.state,s.sname, i.stock_num, pt.description
+	ORDER BY s.sname;
+
+	SELECT rubro_descripcion, anio, cuatrimestre, localidad_nombre, rango_etario, COUNT(ventas.venta_id) cantidad_ventas
+	FROM SARTEN_QUE_LADRA.BI_Rubro rubro
+		JOIN SARTEN_QUE_LADRA.Hechos_Venta ventas ON ventas.rubro_id = rubro.rubro_id
+		JOIN SARTEN_QUE_LADRA.BI_Localidad localidad ON localidad.localidad_id = ventas.localidad_cliente_id
+		JOIN SARTEN_QUE_LADRA.BI_Rango_Etario rangoEtario ON rangoEtario.rango_etario_id = ventas.rango_etario_cliente
+		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON tiempo.tiempo_id = ventas.tiempo_id
+	WHERE ventas.venta_id IN
+	GROUP BY rubro_descripcion, anio, cuatrimestre, localidad_nombre, rango_etario
+	ORDER BY rubro_descripcion, anio, cuatrimestre, localidad_nombre, rango_etario;
+
+
+	--------------------- Mayores ventas para un cuatrimestre
+	SELECT anio, cuatrimestre, localidad_nombre, rango_etario, COUNT(venta_id) cantidad_ventas
+	FROM SARTEN_QUE_LADRA.Hechos_Venta venta
+		JOIN SARTEN_QUE_LADRA.BI_Localidad localidad ON localidad.localidad_id = venta.localidad_cliente_id
+		JOIN SARTEN_QUE_LADRA.BI_Rango_Etario rangoEtario ON rangoEtario.rango_etario_id = venta.rango_etario_cliente
+		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON tiempo.tiempo_id = venta.tiempo_id 
+	GROUP BY anio, cuatrimestre, localidad_nombre, rango_etario
+	ORDER BY COUNT(venta_id), anio, cuatrimestre, localidad_nombre, rango_etario DESC;
+
+	SELECT rubro_descripcion, anio, cuatrimestre, localidad_nombre, rango_etario, COUNT(venta_id) cantidad_ventas
+	FROM SARTEN_QUE_LADRA.Hechos_Venta venta
+		JOIN SARTEN_QUE_LADRA.BI_Localidad localidad ON localidad.localidad_id = venta.localidad_cliente_id
+		JOIN SARTEN_QUE_LADRA.BI_Rango_Etario rangoEtario ON rangoEtario.rango_etario_id = venta.rango_etario_cliente
+		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON tiempo.tiempo_id = venta.tiempo_id
+		JOIN SARTEN_QUE_LADRA.BI_Rubro rubro ON rubro.rubro_id = venta.rubro_id
+	WHERE venta.rubro_id IN (SELECT TOP 5 rubro2.rubro_id
+							FROM SARTEN_QUE_LADRA.BI_Rubro rubro2
+								JOIN SARTEN_QUE_LADRA.Hechos_Venta venta2 ON venta2.rubro_id = rubro2.rubro_id
+								JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo2 ON tiempo2.tiempo_id = venta2.tiempo_id
+							GROUP BY rubro2.rubro_id, venta2.localidad_cliente_id, venta2.rango_etario_cliente, anio, cuatrimestre
+							ORDER BY COUNT(venta_id) DESC)
+	GROUP BY rubro_descripcion, rango_etario, anio, cuatrimestre, localidad_nombre
+	ORDER BY COUNT(venta_id), anio, cuatrimestre;
+
+	/*
 	SELECT rubro_descripcion, COUNT(venta.venta_id) cantidad_de_ventas, cuatrimestre, localidad.localidad_nombre, rango_etario
 	FROM SARTEN_QUE_LADRA.Hechos_Venta venta 
 		JOIN SARTEN_QUE_LADRA.BI_VentaXRubro vxr ON venta.venta_id = vxr.venta_id
@@ -553,4 +630,37 @@ AS
 		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON venta.venta_id = tiempo.tiempo_id
 		JOIN SARTEN_QUE_LADRA.BI_Rango_Etario rango_etario ON venta.rango_etario_cliente = rango_etario.rango_etario_id
 		JOIN SARTEN_QUE_LADRA.BI_Localidad localidad ON venta.localidad_cliente_id = localidad.localidad_id
+		*/
+	*/
 GO
+
+/*
+9. Porcentaje de facturación por concepto para cada mes de cada año. Se calcula
+en función del total del concepto sobre el total del período.
+*/
+
+CREATE VIEW SARTEN_QUE_LADRA.PORCENTAJE_DE_FACTURACION_POR_CONCEPTO
+AS
+	SELECT c.detalle_concepto_id, t.mes, t.anio, SUM(hf.total_facturado) * 100 / (SELECT SUM(hf2.total_facturado) 
+	FROM SARTEN_QUE_LADRA.Hechos_Factura hf2
+			WHERE hf2.id_concepto = c.detalle_concepto_id)
+			AS 'Porcentaje de Facturacion'
+	FROM SARTEN_QUE_LADRA.Hechos_Factura hf 
+	JOIN SARTEN_QUE_LADRA.BI_Tiempo t ON hf.tiempo_id = t.tiempo_id
+	JOIN SARTEN_QUE_LADRA.Concepto c ON c.detalle_concepto_id = hf.id_concepto -- ACA FALTA HACER LA DE BI
+	GROUP BY c.detalle_concepto_id, t.mes, t.anio;
+
+GO
+
+/*
+10. Facturación por provincia. Monto facturado según la provincia del vendedor
+para cada cuatrimestre de cada año.
+*/
+
+CREATE VIEW SARTEN_QUE_LADRA.FACTURACION_POR_PROVINCIA
+AS
+	SELECT hf.provincia_vendedor_id, t.cuatrimestre, t.anio, SUM(hf.total_facturado) AS 'Total Facturado'
+	FROM SARTEN_QUE_LADRA.Hechos_Factura hf 
+	JOIN SARTEN_QUE_LADRA.BI_Tiempo t ON hf.tiempo_id = t.tiempo_id
+	JOIN SARTEN_QUE_LADRA.BI_Provincia p ON p.provincia_id = hf.provincia_vendedor_id
+	GROUP BY hf.provincia_vendedor_id, t.cuatrimestre, t.anio;
