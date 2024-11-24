@@ -1,6 +1,9 @@
 USE GD2C2024
+
 GO
-CREATE SCHEMA SARTEN_QUE_LADRA
+
+CREATE SCHEMA SARTEN_QUE_LADRA;
+
 GO
 
 -- ============================== --
@@ -96,10 +99,20 @@ CREATE TABLE SARTEN_QUE_LADRA.Hechos_Factura (
 	provincia_vendedor_id DECIMAL(18,0),
 );
 
+CREATE TABLE SARTEN_QUE_LADRA.Hechos_Envio (
+	id DECIMAL(18,0) PRIMARY KEY IDENTITY(1,1),
+	tiempo_id DECIMAL(18,0),
+	provincia_almacen_id DECIMAL(18,0),
+	loc_cliente_id DECIMAL(18,0),
+	enviados_a_tiempo DECIMAL(18,0),
+	costo_envios DECIMAL(18,0),
+	total_enviados DECIMAL(18,0)
+);
+
 -- ============================== --
 --         CONSTRAINTS            --
 -- ============================== --
-ALTER TABLE SARTEN_QUE_LADRA.BI_Localidad ADD CONSTRAINT fk_bilocalidad_provincia FOREIGN KEY (provincia_id) REFERENCES SARTEN_QUE_LADRA.BI_Provincia;
+ALTER TABLE SARTEN_QUE_LADRA.BI_Localidad ADD CONSTRAINT fk_localidad_provincia FOREIGN KEY (provincia_id) REFERENCES SARTEN_QUE_LADRA.BI_Provincia;
 
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT fk_hechos_pago_localidad FOREIGN KEY (localidad_cliente_id) REFERENCES SARTEN_QUE_LADRA.BI_Localidad(localidad_id);
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT fk_hechos_pago_tiempo FOREIGN KEY (tiempo_id) REFERENCES SARTEN_QUE_LADRA.BI_Tiempo;
@@ -115,9 +128,13 @@ ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_tiempo 
 --ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_rubro FOREIGN KEY (rubro_id) REFERENCES SARTEN_QUE_LADRA.BI_Rubro(rubro_id);
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta ADD CONSTRAINT fk_hechos_venta_localidad FOREIGN KEY (localidad_cliente_id) REFERENCES SARTEN_QUE_LADRA.BI_Localidad(localidad_id);
 
-ALTER TABLE SARTEN_QUE_LADRA.Hechos_Factura ADD CONSTRAINT fk_factura_tiempo FOREIGN KEY (tiempo_id) REFERENCES SARTEN_QUE_LADRA.BI_Tiempo (tiempo_id);
-ALTER TABLE SARTEN_QUE_LADRA.Hechos_Factura ADD CONSTRAINT fk_factura_concepto FOREIGN KEY (id_concepto) REFERENCES SARTEN_QUE_LADRA.BI_Concepto (id_concepto);
-ALTER TABLE SARTEN_QUE_LADRA.Hechos_Factura ADD CONSTRAINT fk_factura_provincia FOREIGN KEY (provincia_vendedor_id) REFERENCES SARTEN_QUE_LADRA.BI_Provincia (provincia_id);
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Factura ADD CONSTRAINT fk_hechos_factura_tiempo FOREIGN KEY (tiempo_id) REFERENCES SARTEN_QUE_LADRA.BI_Tiempo (tiempo_id);
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Factura ADD CONSTRAINT fk_hechos_factura_concepto FOREIGN KEY (id_concepto) REFERENCES SARTEN_QUE_LADRA.BI_Concepto (id_concepto);
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Factura ADD CONSTRAINT fk_hechos_factura_provincia FOREIGN KEY (provincia_vendedor_id) REFERENCES SARTEN_QUE_LADRA.BI_Provincia (provincia_id);
+
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Envio ADD CONSTRAINT fk_BI_HechosEnvio_LocCliente FOREIGN KEY (loc_cliente_id) REFERENCES SARTEN_QUE_LADRA.BI_Localidad(localidad_id);
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Envio ADD CONSTRAINT FK_BI_HechosEnvio_ProvinciaAlmacen FOREIGN KEY (provincia_almacen_id) REFERENCES SARTEN_QUE_LADRA.BI_Provincia(provincia_id);
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Envio ADD CONSTRAINT FK_BI_HechosEnvio_Tiempo FOREIGN KEY (tiempo_id) REFERENCES SARTEN_QUE_LADRA.BI_Tiempo(tiempo_id);
 
 -- ============================== -- 
 --			FUNCTIONS	          --
@@ -272,11 +289,31 @@ AS BEGIN
     RETURN @resultado
 END
 
+GO
+
+CREATE FUNCTION SARTEN_QUE_LADRA.ENVIADOS_A_TIEMPO(@hora_inicio DECIMAL(18,0), @hora_fin DECIMAL(18,0), @fecha_programada DATETIME, @fecha_entrega DATETIME)
+RETURNS INT
+AS BEGIN
+    DECLARE @a_tiempo INT
+    IF CAST(@fecha_programada AS DATE) = CAST(@fecha_entrega AS DATE)
+		BEGIN
+			DECLARE @hora_entrega DECIMAL(18,0);
+			SET @hora_entrega = DATEPART(HOUR, @fecha_entrega);
+			IF @hora_entrega BETWEEN @hora_inicio AND @hora_fin
+				SET @a_tiempo = 1;
+			ELSE 
+				SET @a_tiempo = 0; 
+		END;
+    ELSE
+		SET @a_tiempo = 0;
+	RETURN @a_tiempo;
+END
+
 -- ============================== -- 
 --      STORED PROCEDURES         --
 -- ============================== --
 
-GOM
+GO
 
 CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Localidad
 AS BEGIN
@@ -525,6 +562,29 @@ AS BEGIN
 	GROUP BY  SARTEN_QUE_LADRA.BI_Select_Tiempo(f.factura_fecha),
 			  SARTEN_QUE_LADRA.BI_Select_Provincia_Vendedor(f.vendedor_id),
 			  df.detalle_concepto_id
+END
+
+GO
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_HECHOS_ENVIO
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.Hechos_Envio (
+		tiempo_id, provincia_almacen_id, loc_cliente_id, enviados_a_tiempo, costo_envios, total_enviados)
+	SELECT SARTEN_QUE_LADRA.BI_Select_Tiempo(e.envio_fecha_hora_entrega),
+		   SARTEN_QUE_LADRA.BI_Select_Provincia_Almacen(am.almacen_codigo),
+		   SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente_Segun_Cantidad_De_Domicilios(c.cliente_id, e.envio_numero),
+		   SUM(SARTEN_QUE_LADRA.ENVIADOS_A_TIEMPO(e.envio_horario_inicio, e.envio_horario_fin, e.envio_fecha_programada, e.envio_fecha_hora_entrega)),
+		   SUM(e.envio_costo),
+		   COUNT(e.envio_numero)
+	FROM SARTEN_QUE_LADRA.Envio e
+		JOIN SARTEN_QUE_LADRA.Venta v ON v.venta_codigo = e.venta_codigo
+		JOIN SARTEN_QUE_LADRA.Cliente c ON c.cliente_id = v.cliente_id
+		JOIN SARTEN_QUE_LADRA.DetalleVenta dv ON dv.venta_codigo = v.venta_codigo
+		JOIN SARTEN_QUE_LADRA.Publicacion p ON p.publicacion_codigo = dv.publicacion_codigo
+		JOIN SARTEN_QUE_LADRA.Almacen am ON am.almacen_codigo = p.almacen_codigo
+		GROUP BY SARTEN_QUE_LADRA.BI_Select_Tiempo(e.envio_fecha_hora_entrega),
+				 SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente_Segun_Cantidad_De_Domicilios(c.cliente_id, e.envio_numero),
+				 SARTEN_QUE_LADRA.BI_Select_Provincia_Almacen(am.almacen_codigo)
 END
 
 -- ============================== -- 
