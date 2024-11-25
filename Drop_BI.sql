@@ -1,6 +1,4 @@
--- ============================== -- 
---	   FOREIGN KEYS	          --
--- ============================== --
+-- FKS
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Publicacion DROP CONSTRAINT fk_hechos_publicacion_tiempo_id_p;
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Publicacion DROP CONSTRAINT fk_hechos_publicacion_marca_id;
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Publicacion DROP CONSTRAINT fk_hechos_publicacion_pub_subrubro;
