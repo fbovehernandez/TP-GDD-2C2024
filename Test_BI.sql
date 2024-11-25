@@ -28,3 +28,22 @@ SELECT
 
 /* PARA SELECCION DE TIEMPOS ID */
 SELECT tiempo_id, mes, anio FROM SARTEN_QUE_LADRA.BI_Tiempo
+
+
+/* PODRIA HACER ESTO PARA TODOS LOS CASOS, PERO PARECERIA QUE DA BIEN! 
+/* 13	3	483338.02	12 */
+
+SELECT * FROM SARTEN_QUE_LADRA.BI_Provincia p WHERE p.id = 12
+SELECT * FROM SARTEN_QUE_LADRA.BI_Tiempo t WHERE t.tiempo_id = 13 -- ENERO 2026
+
+SELECT f.factura_numero, p.provincia_nombre, f.factura_fecha, f.factura_total, df.detalle_factura_id, df.detalle_concepto_id, 
+		df.detalle_factura_subtotal
+FROM SARTEN_QUE_LADRA.Factura f 
+JOIN SARTEN_QUE_LADRA.DetalleFactura df ON f.factura_numero = df.factura_numero
+JOIN SARTEN_QUE_LADRA.Vendedor v ON v.vendedor_id = f.vendedor_id
+JOIN SARTEN_QUE_LADRA.DomicilioXUsuario dxu ON v.usuario_id = dxu.usuario_id 
+JOIN SARTEN_QUE_LADRA.Domicilio d ON dxu.domicilio_id = d.domicilio_id
+JOIN SARTEN_QUE_LADRA.Localidad l ON l.localidad_id = d.localidad_id
+JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_id = l.provincia_id
+WHERE YEAR(f.factura_fecha) = 2026 AND MONTH(f.factura_fecha) = 1 AND df.detalle_concepto_id = 3 
+	AND p.provincia_id = 12
