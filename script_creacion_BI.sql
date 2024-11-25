@@ -627,55 +627,49 @@ AS
 /* 4. Rendimiento de rubros. Los 5 rubros con mayores ventas para cada
 cuatrimestre de cada año según la localidad y rango etario de los clientes. */
 
+CREATE VIEW SARTEN_QUE_LADRA.RENDIMIENTO_RUBROS AS
+WITH VentasClasificadas AS (
+    SELECT
+        t.anio,
+        t.cuatrimestre,
+        l.localidad_nombre,
+		rv.rango_etario_id,
+        rv.rango_etario AS rango_etario_cliente,
+        hv.rubro_id,
+		rubro.rubro_descripcion AS rubro_desc,
+        SUM(hv.importe_venta) AS total_venta,
+        ROW_NUMBER() OVER (
+            PARTITION BY t.anio, t.cuatrimestre, l.localidad_nombre, rv.rango_etario_id
+            ORDER BY SUM(hv.importe_venta) DESC
+        ) AS ranking
+    FROM
+        SARTEN_QUE_LADRA.Hechos_Venta hv
+    JOIN SARTEN_QUE_LADRA.BI_Tiempo t ON hv.tiempo_id = t.tiempo_id
+    JOIN SARTEN_QUE_LADRA.BI_Localidad l ON hv.localidad_cliente_id = l.localidad_id
+    JOIN SARTEN_QUE_LADRA.BI_Rango_Etario rv ON hv.rango_etario_cliente = rv.rango_etario_id
+	JOIN SARTEN_QUE_LADRA.BI_Rubro rubro ON rubro.rubro_id = hv.rubro_id
+    GROUP BY
+        t.anio,
+        t.cuatrimestre,
+        l.localidad_nombre,
+        rv.rango_etario_id,
+		rv.rango_etario,
+        hv.rubro_id,
+		rubro.rubro_descripcion
+)
+SELECT
+    anio,
+    cuatrimestre,
+    localidad_nombre,
+    rango_etario_cliente,
+    rubro_desc,
+    total_venta
+FROM
+    VentasClasificadas
+WHERE
+    ranking <= 5;
 GO
-CREATE VIEW SARTEN_QUE_LADRA.RUBROS_MAYORES_VENTAS
-AS
-	SELECT DISTINCT TOP 5 rb.rubro_descripcion, cuatrimestre, anio, l.localidad_nombre, re.rango_etario, 
-					SUM(importe_venta) 'Venta por rubro'
-	FROM SARTEN_QUE_LADRA.Hechos_Venta venta
-		JOIN SARTEN_QUE_LADRA.BI_Localidad l ON l.localidad_id = venta.localidad_cliente_id
-		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON venta.tiempo_id = tiempo.tiempo_id
-		JOIN SARTEN_QUE_LADRA.BI_Rubro rb ON rb.rubro_id = venta.rubro_id
-		JOIN SARTEN_QUE_LADRA.BI_Rango_Etario re ON re.rango_etario_id = venta.rango_etario_cliente
-	GROUP BY l.localidad_nombre, cuatrimestre, anio, re.rango_etario, rb.rubro_descripcion
-	ORDER BY SUM(importe_venta) DESC
-
-
-/*
-	SELECT 
-		rubro.rubro_descripcion, 
-		tiempo.anio, 
-		tiempo.cuatrimestre, 
-		localidad.localidad_nombre, 
-		rangoEtario.rango_etario, 
-		SUM(ventas.importe_venta) AS cantidad_ventas
-	FROM SARTEN_QUE_LADRA.BI_Rubro rubro
-		JOIN SARTEN_QUE_LADRA.Hechos_Venta ventas ON ventas.rubro_id = rubro.rubro_id
-		JOIN SARTEN_QUE_LADRA.BI_Localidad localidad ON localidad.localidad_id = ventas.localidad_cliente_id
-		JOIN SARTEN_QUE_LADRA.BI_Rango_Etario rangoEtario ON rangoEtario.rango_etario_id = ventas.rango_etario_cliente
-		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON tiempo.tiempo_id = ventas.tiempo_id
-	WHERE ventas.venta_id IN (
-        SELECT TOP 5 ventas2.venta_id
-        FROM SARTEN_QUE_LADRA.Hechos_Venta ventas2 JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo2 ON (tiempo2.tiempo_id = ventas2.tiempo_id)
-        WHERE tiempo2.anio = tiempo.anio AND tiempo2.cuatrimestre = tiempo.cuatrimestre
-        GROUP BY 
-            ventas2.venta_id
-        ORDER BY 
-            SUM(ventas2.importe_venta) DESC
-    )
-	GROUP BY 
-		rubro.rubro_descripcion,
-		tiempo.anio, 
-		tiempo.cuatrimestre, 
-		localidad.localidad_nombre, 
-		rangoEtario.rango_etario
-	ORDER BY 
-		rubro.rubro_descripcion, 
-		tiempo.anio, 
-		tiempo.cuatrimestre, 
-		localidad.localidad_nombre, 
-		rangoEtario.rango_etario;
-*/
+	
 /* 6. Pago en Cuotas. Las 3 localidades con el mayor importe de pagos en cuotas,
 según el medio de pago, mes y año. Se calcula sumando los importes totales de
 todas las ventas en cuotas. Se toma la localidad del cliente (Si tiene más de una
