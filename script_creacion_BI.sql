@@ -459,7 +459,13 @@ BEGIN
 		CASE WHEN MONTH(pago_fecha) BETWEEN 1 AND 4 THEN 1
                  WHEN MONTH(pago_fecha) BETWEEN 5 AND 8 THEN 2
                  WHEN MONTH(pago_fecha) BETWEEN 9 AND 12 THEN 3 END
-	FROM SARTEN_QUE_LADRA.Pago)
+	FROM SARTEN_QUE_LADRA.Pago
+	UNION 
+	SELECT DISTINCT YEAR(publicacion_fecha_inicio), MONTH(publicacion_fecha_inicio),
+        CASE WHEN MONTH(publicacion_fecha_inicio) BETWEEN 1 AND 4 THEN 1
+                 WHEN MONTH(publicacion_fecha_inicio) BETWEEN 5 AND 8 THEN 2
+                 WHEN MONTH(publicacion_fecha_inicio) BETWEEN 9 AND 12 THEN 3 END
+    FROM SARTEN_QUE_LADRA.Publicacion)
 END
 
 GO
@@ -553,6 +559,21 @@ AS BEGIN
 END
 GO
 
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Rubro
+AS BEGIN
+    INSERT INTO SARTEN_QUE_LADRA.BI_Rubro
+    SELECT DISTINCT rubro_id, rubro_descripcion 
+    FROM SARTEN_QUE_LADRA.Rubro
+END
+
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Subrubro
+AS
+BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.BI_Subrubro (subrubro_id, subrubro_rubro)
+	SELECT DISTINCT subrubro_id, subrubro_rubro
+	FROM SARTEN_QUE_LADRA.Subrubro
+END
+	
 -- ============================== -- 
 --      EXEC PROCEDURES         --
 -- ============================== --
