@@ -1,4 +1,9 @@
-/*** TABLAS ***/
+USE GD2C2024
+GO
+
+-- ============================== --
+--          TABLAS				  --
+-- ============================== --
 
 CREATE TABLE SARTEN_QUE_LADRA.BI_Tiempo (
 	tiempo_id DECIMAL(18,0) PRIMARY KEY IDENTITY(1,1),
@@ -23,6 +28,7 @@ CREATE TABLE SARTEN_QUE_LADRA.BI_Localidad (
 	localidad_nombre NVARCHAR(50),
 );
 
+-- Queda creada por las dudas, pero no es migrada con el resto dado que la view se desestimo
 CREATE TABLE SARTEN_QUE_LADRA.BI_Rango_Horario (
     rango_horario_id DECIMAL(18,0) PRIMARY KEY IDENTITY(1,1),
     rango_horario VARCHAR(20)
