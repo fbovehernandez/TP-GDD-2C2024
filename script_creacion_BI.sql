@@ -1,9 +1,5 @@
-USE GD2C2024
-GO
 
--- ============================== --
---          TABLAS				  --
--- ============================== --
+/*** TABLAS ***/
 
 CREATE TABLE SARTEN_QUE_LADRA.BI_Tiempo (
 	tiempo_id DECIMAL(18,0) PRIMARY KEY IDENTITY(1,1),
@@ -28,11 +24,13 @@ CREATE TABLE SARTEN_QUE_LADRA.BI_Localidad (
 	localidad_nombre NVARCHAR(50),
 );
 
--- Queda creada por las dudas, pero no es migrada con el resto dado que la view se desestimo
-CREATE TABLE SARTEN_QUE_LADRA.BI_Rango_Horario (
-    rango_horario_id DECIMAL(18,0) PRIMARY KEY IDENTITY(1,1),
-    rango_horario VARCHAR(20)
-);
+CREATE TABLE SARTEN_QUE_LADRA.BI_HECHOS_FACTURA (
+	factura_id DECIMAL(18,0) PRIMARY KEY IDENTITY (1,1),
+	tiempo_id DECIMAL(18,0),
+	id_concepto DECIMAL(18,0), -- FK
+	total_facturado DECIMAL(18,0),
+	provincia_vendedor_id DECIMAL(18,0), -- FK
+)
 
 CREATE TABLE SARTEN_QUE_LADRA.BI_Rango_Etario (
     rango_etario_id DECIMAL(18,0) PRIMARY KEY IDENTITY(1,1),
@@ -101,6 +99,30 @@ CREATE TABLE SARTEN_QUE_LADRA.BI_CONCEPTO (
 	idx_concepto DECIMAL(18,0) PRIMARY KEY,
 	concepto_desc NVARCHAR(50)
 )
+
+CREATE TABLE SARTEN_QUE_LADRA.Hechos_Publicacion (
+	publicacion_id DECIMAL(18,0) PRIMARY KEY,
+	publicacion_subrubro_id DECIMAL(18,0),
+	dias_publicada DECIMAL(18,0),
+	tiempo_id DECIMAL(18,0),
+	marca_id DECIMAL(18,0), 
+	stock_inicial DECIMAL(18,0),
+);
+
+CREATE TABLE SARTEN_QUE_LADRA.BI_Marca (
+	marca_id DECIMAL(18,0) PRIMARY KEY,
+	marca_nombre NVARCHAR(50)
+)
+
+-- FK HECHOS_FACTURA
+ALTER TABLE SARTEN_QUE_LADRA.BI_HECHOS_FACTURA ADD CONSTRAINT FK_BI_HECHOS_FACTURA_PROVINCIA FOREIGN KEY (provincia_vendedor_id) REFERENCES SARTEN_QUE_LADRA.BI_Provincia(id);
+ALTER TABLE SARTEN_QUE_LADRA.BI_HECHOS_FACTURA ADD CONSTRAINT FK_BI_HECHOS_FACTURA_concepto FOREIGN KEY (id_concepto) REFERENCES SARTEN_QUE_LADRA.BI_CONCEPTO(idx_concepto);
+
+
+-- FK HECHOS PUBLICACION
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Publicacion ADD CONSTRAINT fk_hechos_publicacion_tiempo_id_p FOREIGN KEY (tiempo_id) REFERENCES SARTEN_QUE_LADRA.BI_Tiempo(tiempo_id);
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Publicacion ADD CONSTRAINT fk_hechos_publicacion_marca_id FOREIGN KEY (marca_id) REFERENCES SARTEN_QUE_LADRA.BI_Marca(marca_id);
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Publicacion ADD CONSTRAINT fk_hechos_publicacion_pub_subrubro FOREIGN KEY (publicacion_subrubro_id) REFERENCES SARTEN_QUE_LADRA.BI_Subrubro(subrubro_id);
 
 -- FK HECHOS PAGO
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago ADD CONSTRAINT FK_Hechos_Pago_Localidad_Cliente FOREIGN KEY (localidad_cliente_id) REFERENCES SARTEN_QUE_LADRA.BI_Localidad(localidad_id);
@@ -460,54 +482,101 @@ AS BEGIN
 			 tipomediopago.id_medio_pago
 END
 
+GO
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Publicacion
+AS
+BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.Hechos_Publicacion(publicacion_id, publicacion_subrubro_id, dias_publicada, tiempo_id, marca_id, stock_inicial)
+	SELECT  p.publicacion_codigo, 
+			prXs.subrubro_id, 
+			DATEDIFF(day, p.publicacion_fecha_inicio, p.publicacion_fecha_fin), 
+			SARTEN_QUE_LADRA.BI_Select_Tiempo(p.publicacion_fecha_inicio), 
+			mXpr.marca_id, 
+			p.publicacion_stock 
+	FROM SARTEN_QUE_LADRA.Publicacion p 
+			JOIN SARTEN_QUE_LADRA.Producto pr ON (p.producto_id = pr.producto_id)
+			JOIN SARTEN_QUE_LADRA.ProductoXSubrubro prXs ON (prXs.producto_id = pr.producto_id)
+			JOIN SARTEN_QUE_LADRA.MarcaXProducto mXpr ON (mXpr.producto_id = pr.producto_id)
+END
+
+GO
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Marca
+AS
+BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.BI_Marca (marca_id, marca_nombre)
+	SELECT DISTINCT marca_id, marca_nombre
+	FROM SARTEN_QUE_LADRA.Marca
+END
+
+GO
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Factura
+AS BEGIN
+    INSERT INTO SARTEN_QUE_LADRA.BI_HECHOS_FACTURA (
+		tiempo_id, id_concepto, total_facturado, provincia_vendedor_id)
+    SELECT DISTINCT  
+		SARTEN_QUE_LADRA.BI_Select_Tiempo(f.factura_fecha), 
+		df.detalle_concepto_id,
+		SUM(df.detalle_factura_subtotal),
+		SARTEN_QUE_LADRA.BI_Select_Provincia_Vendedor(f.vendedor_id)
+	FROM SARTEN_QUE_LADRA.DetalleFactura df 
+	JOIN SARTEN_QUE_LADRA.Factura f ON df.factura_numero = f.factura_numero
+	JOIN SARTEN_QUE_LADRA.Concepto cf ON cf.detalle_concepto_id = df.detalle_concepto_id
+	GROUP BY  SARTEN_QUE_LADRA.BI_Select_Tiempo(f.factura_fecha),
+			  SARTEN_QUE_LADRA.BI_Select_Provincia_Vendedor(f.vendedor_id),
+			  df.detalle_concepto_id
+END
+GO
+
+-- ============================== -- 
+--      EXEC PROCEDURES         --
+-- ============================== --
+
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Venta;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Rango_Etario;
+EXEC SARTEN_QUE_LADRA.MIGRAR_HECHOS_ENVIO;
+EXEC SARTEN_QUE_LADRA.BI_MIGRAR_LOCALIDAD;
+EXEC SARTEN_QUE_LADRA.BI_MIGRAR_PROVINCIA;
+EXEC SARTEN_QUE_LADRA.BI_MIGRAR_ENVIO;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Concepto;
+EXEC SARTEN_QUE_LADRA.BI_MIGRAR_TIEMPO;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Medio_De_Pago;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Tipo_Medio_De_Pago;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Pago;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Publicacion;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Marca;
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Factura;
+EXEC SARTEN_QUE_LADRA.BI_Subrubro;
+EXEC SARTEN_QUE_LADRA.BI_Rubro;
+
+GO
+
 /*** VIEWS ***/
 
-/* 6. Pago en Cuotas. Las 3 localidades con el mayor importe de pagos en cuotas,
-según el medio de pago, mes y año. Se calcula sumando los importes totales de
-todas las ventas en cuotas. Se toma la localidad del cliente (Si tiene más de una
-dirección se toma a la que seleccionó el envío) */
-
-CREATE VIEW SARTEN_QUE_LADRA.LOCALIDADES_MAYOR_IMPORTE_CUOTAS
-AS
-	SELECT TOP 3 hp.localidad_cliente_id, t.mes, t.anio, mdp.medio_pago, SUM(hp.importe_cuotas) 
-			AS 'Importe por cuotas'
-	FROM SARTEN_QUE_LADRA.Hechos_Pago hp 
-		JOIN SARTEN_QUE_LADRA.BI_Tiempo t ON hp.tiempo_id = t.tiempo_id
-		JOIN SARTEN_QUE_LADRA.BI_Localidad l ON hp.localidad_cliente_id = l.localidad_id
-		JOIN SARTEN_QUE_LADRA.BI_Medio_De_Pago mdp ON mdp.medio_pago_id = hp.medio_pago_id
-	GROUP BY hp.localidad_cliente_id, t.mes, t.anio, mdp.medio_pago
-	ORDER BY SUM(hp.importe_cuotas) DESC
-
--- CALCULO DE LAS VIEWS
-
-/* 7. Porcentaje de cumplimiento de envíos en los tiempos programados por
-provincia (del almacén) por año/mes (desvío). Se calcula teniendo en cuenta los
-envíos cumplidos sobre el total de envíos para el período. */
+/* 1. Promedio de tiempo de publicaciones. Tiempo promedio que se encuentra
+vigente una publicación según el subRubro asociado a los productos de la misma
+para cada cuatrimestres de cada año. Se calcula en función de la diferencia entre
+la fecha de inicio y fin. Se toma en cuenta la fecha de inicio */
 
 GO
-CREATE VIEW SARTEN_QUE_LADRA.PORCENTAJE_ENVIOS_A_TIEMPO
+CREATE VIEW SARTEN_QUE_LADRA.PROMEDIO_TIEMPO_PUBLICACIONES
 AS
-    SELECT SUM(e.enviados_a_tiempo) * 100 / SUM(e.total_enviados) AS 'Porcentaje de cumplimiento', 
-			t.mes AS 'Mes', t.anio AS 'Año', e.provincia_almacen_id 'Provincia Almacen'
-    FROM SARTEN_QUE_LADRA.BI_HECHOS_ENVIO e
-    JOIN SARTEN_QUE_LADRA.BI_TIEMPO t ON e.tiempo_id = t.tiempo_id
-	JOIN SARTEN_QUE_LADRA.BI_Provincia p ON p.id = e.provincia_almacen_id
-    GROUP BY t.mes, t.anio, e.provincia_almacen_id
+	SELECT rb.subrubro_rubro, cuatrimestre, anio, SUM(p.dias_publicada) / COUNT(*) 'Promedio tiempo de publicacion' 
+	FROM SARTEN_QUE_LADRA.Hechos_Publicacion p
+		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON p.tiempo_id = tiempo.tiempo_id
+		JOIN SARTEN_QUE_LADRA.BI_Subrubro rb ON rb.subrubro_id = p.publicacion_subrubro_id
+	GROUP BY cuatrimestre, anio, rb.subrubro_rubro	
 
-SELECT * FROM SARTEN_QUE_LADRA.PORCENTAJE_ENVIOS_A_TIEMPO
+/* 2. Promedio de Stock Inicial. Cantidad de stock promedio con que se dan de alta
+las publicaciones según la Marca de los productos publicados por año. */
 
-/* 8. Localidades que pagan mayor costo de envío. Las 5 localidades (tomando la
-localidad del cliente) con mayor costo de envío. */
 GO
-CREATE VIEW SARTEN_QUE_LADRA.LOCALIDADES_MAS_PAGAS
+CREATE VIEW SARTEN_QUE_LADRA.PROMEDIO_STOCK_PUBLICACION
 AS
-	SELECT TOP 5 e.loc_cliente_id, SUM(e.costo_envios) AS 'Costos de envio' 
-	FROM SARTEN_QUE_LADRA.BI_HECHOS_ENVIO e
-	JOIN SARTEN_QUE_LADRA.BI_Localidad l ON e.loc_cliente_id = l.localidad_id
-	GROUP BY e.loc_cliente_id
-	ORDER BY SUM(e.costo_envios) DESC
-
-SELECT * FROM SARTEN_QUE_LADRA.LOCALIDADES_MAS_PAGAS
+	SELECT anio, m.marca_nombre, SUM(p.stock_inicial) / COUNT(*) 'Promedio stock de publicacion' 
+	FROM SARTEN_QUE_LADRA.Hechos_Publicacion p
+		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON p.tiempo_id = tiempo.tiempo_id
+		JOIN SARTEN_QUE_LADRA.BI_Marca m ON m.marca_id = p.marca_id
+	GROUP BY anio, m.marca_nombre
 
 /* 3. Venta promedio mensual. Valor promedio de las ventas (en $) según la
 provincia correspondiente a la ubicación del almacén para cada mes de cada año
@@ -517,7 +586,7 @@ las mismas.*/
 GO
 CREATE VIEW SARTEN_QUE_LADRA.VENTA_PROMEDIO_MENSUAL
 AS
-	SELECT DISTINCT anio, mes, provincia_almacen_id, SUM(importe_venta) / ¿? 'Venta Promedio Mensual Según Provincia'
+	SELECT DISTINCT anio, mes, provincia_almacen_id, SUM(importe_venta) / COUNT(venta.venta_id) 'Venta Promedio Mensual Según Provincia'
 	FROM SARTEN_QUE_LADRA.Hechos_Venta venta
 		JOIN SARTEN_QUE_LADRA.BI_Provincia provincia ON venta.provincia_almacen_id = provincia.id
 		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON venta.tiempo_id = tiempo.tiempo_id
@@ -539,4 +608,74 @@ AS
 	GROUP BY l.localidad_nombre, cuatrimestre, anio, re.rango_etario, rb.rubro_descripcion
 	ORDER BY SUM(importe_venta) DESC
 
-SELECT * FROM SARTEN_QUE_LADRA.RUBROS_MAYORES_VENTAS
+/* 6. Pago en Cuotas. Las 3 localidades con el mayor importe de pagos en cuotas,
+según el medio de pago, mes y año. Se calcula sumando los importes totales de
+todas las ventas en cuotas. Se toma la localidad del cliente (Si tiene más de una
+dirección se toma a la que seleccionó el envío) */
+
+CREATE VIEW SARTEN_QUE_LADRA.LOCALIDADES_MAYOR_IMPORTE_CUOTAS
+AS
+	SELECT TOP 3 hp.localidad_cliente_id, t.mes, t.anio, mdp.medio_pago, SUM(hp.importe_cuotas) 
+			AS 'Importe por cuotas'
+	FROM SARTEN_QUE_LADRA.Hechos_Pago hp 
+		JOIN SARTEN_QUE_LADRA.BI_Tiempo t ON hp.tiempo_id = t.tiempo_id
+		JOIN SARTEN_QUE_LADRA.BI_Localidad l ON hp.localidad_cliente_id = l.localidad_id
+		JOIN SARTEN_QUE_LADRA.BI_Medio_De_Pago mdp ON mdp.medio_pago_id = hp.medio_pago_id
+	GROUP BY hp.localidad_cliente_id, t.mes, t.anio, mdp.medio_pago
+	ORDER BY SUM(hp.importe_cuotas) DESC
+
+/* 7. Porcentaje de cumplimiento de envíos en los tiempos programados por
+provincia (del almacén) por año/mes (desvío). Se calcula teniendo en cuenta los
+envíos cumplidos sobre el total de envíos para el período. */
+
+GO
+CREATE VIEW SARTEN_QUE_LADRA.PORCENTAJE_ENVIOS_A_TIEMPO
+AS
+    SELECT SUM(e.enviados_a_tiempo) * 100 / SUM(e.total_enviados) AS 'Porcentaje de cumplimiento', 
+			t.mes AS 'Mes', t.anio AS 'Año', e.provincia_almacen_id 'Provincia Almacen'
+    FROM SARTEN_QUE_LADRA.BI_HECHOS_ENVIO e
+    JOIN SARTEN_QUE_LADRA.BI_TIEMPO t ON e.tiempo_id = t.tiempo_id
+	JOIN SARTEN_QUE_LADRA.BI_Provincia p ON p.id = e.provincia_almacen_id
+    GROUP BY t.mes, t.anio, e.provincia_almacen_id
+
+SELECT * FROM SARTEN_QUE_LADRA.PORCENTAJE_ENVIOS_A_TIEMPO
+
+/* 8. Localidades que pagan mayor costo de envío. Las 5 localidades (tomando la
+localidad del cliente) con mayor costo de envío. */
+
+GO
+CREATE VIEW SARTEN_QUE_LADRA.LOCALIDADES_MAS_PAGAS
+AS
+	SELECT TOP 5 e.loc_cliente_id, SUM(e.costo_envios) AS 'Costos de envio' 
+	FROM SARTEN_QUE_LADRA.BI_HECHOS_ENVIO e
+	JOIN SARTEN_QUE_LADRA.BI_Localidad l ON e.loc_cliente_id = l.localidad_id
+	GROUP BY e.loc_cliente_id
+	ORDER BY SUM(e.costo_envios) DESC
+
+/* 9. Porcentaje de facturación por concepto para cada mes de cada año. Se calcula
+		en función del total del concepto sobre el total del período */
+
+GO
+CREATE VIEW SARTEN_QUE_LADRA.PORCENTAJE_FACTURACION_CONCEPTO
+AS
+	SELECT cp.idx_concepto, cp.concepto_desc, t.mes, t.anio, 
+		SUM(hf.total_facturado) * 100 / (SELECT SUM(hf2.total_facturado) FROM SARTEN_QUE_LADRA.BI_HECHOS_FACTURA hf2
+														WHERE hf2.id_concepto = cp.idx_concepto)
+			AS 'Porcentaje de Facturacion'
+	FROM SARTEN_QUE_LADRA.BI_HECHOS_FACTURA hf 
+	JOIN SARTEN_QUE_LADRA.BI_Tiempo t ON hf.tiempo_id = t.tiempo_id
+	JOIN SARTEN_QUE_LADRA.BI_CONCEPTO cp ON cp.idx_concepto = hf.id_concepto 
+	GROUP BY cp.concepto_desc, cp.idx_concepto, t.mes, t.anio
+
+/* 10. Facturación por provincia. Monto facturado según la provincia del vendedor
+para cada cuatrimestre de cada año. */
+
+GO
+CREATE VIEW SARTEN_QUE_LADRA.FACTURACION_PROVINCIA
+AS
+	SELECT hf.provincia_vendedor_id, t.cuatrimestre, t.anio, SUM(hf.total_facturado) 
+			AS 'Total Facturado'
+	FROM SARTEN_QUE_LADRA.BI_HECHOS_FACTURA hf 
+	JOIN SARTEN_QUE_LADRA.BI_Tiempo t ON hf.tiempo_id = t.tiempo_id
+	JOIN SARTEN_QUE_LADRA.BI_Provincia p ON p.id = hf.provincia_vendedor_id
+	GROUP BY hf.provincia_vendedor_id, t.cuatrimestre, t.anio
