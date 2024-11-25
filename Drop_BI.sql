@@ -1,5 +1,5 @@
 -- ============================== -- 
---				FOREIGN KEYS	          --
+--	   FOREIGN KEYS	          --
 -- ============================== --
 
 ALTER TABLE SARTEN_QUE_LADRA.Hechos_Pago DROP CONSTRAINT FK_Hechos_Pago_Localidad_Cliente;
@@ -16,10 +16,21 @@ ALTER TABLE SARTEN_QUE_LADRA.BI_HECHOS_FACTURA DROP CONSTRAINT FK_BI_HECHOS_FACT
 ALTER TABLE SARTEN_QUE_LADRA.BI_HECHOS_FACTURA DROP CONSTRAINT FK_BI_HECHOS_FACTURA_Tiempo;
 ALTER TABLE SARTEN_QUE_LADRA.BI_HECHOS_FACTURA DROP CONSTRAINT FK_BI_HECHOS_FACTURA_concepto;
 
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta DROP CONSTRAINT fk_hechos_venta_provincia;
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta DROP CONSTRAINT fk_hechos_venta_rango_etario;
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta DROP CONSTRAINT fk_hechos_venta_tiempo;
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta DROP CONSTRAINT fk_hechos_venta_rubro;
+ALTER TABLE SARTEN_QUE_LADRA.Hechos_Venta DROP CONSTRAINT fk_hechos_venta_localidad;
+
 -- ============================== -- 
---				TABLES	          --
+--		TABLES	          --
 -- ============================== --
 
+DROP TABLE IF EXISTS SARTEN_QUE_LADRA.Hechos_Venta;
+DROP TABLE IF EXISTS SARTEN_QUE_LADRA.BI_Rubro;
+DROP TABLE IF EXISTS SARTEN_QUE_LADRA.BI_Subrubro;
+DROP TABLE IF EXISTS SARTEN_QUE_LADRA.BI_Rango_Etario;
+DROP TABLE IF EXISTS SARTEN_QUE_LADRA.BI_Rango_Horario;
 DROP TABLE IF EXISTS SARTEN_QUE_LADRA.BI_Tiempo;
 DROP TABLE IF EXISTS SARTEN_QUE_LADRA.BI_Localidad;
 DROP TABLE IF EXISTS SARTEN_QUE_LADRA.BI_Provincia;
@@ -45,7 +56,7 @@ DROP FUNCTION IF EXISTS SARTEN_QUE_LADRA.BI_Select_Provincia_Vendedor;
 DROP FUNCTION IF EXISTS SARTEN_QUE_LADRA.ENVIADOS_A_TIEMPO
 
 -- ============================== -- 
---			PROCEDURES	          --
+--	    PROCEDURES	          --
 -- ============================== --
   
 DROP PROCEDURE IF EXISTS SARTEN_QUE_LADRA.BI_Migrar_Provincia;
@@ -58,7 +69,7 @@ DROP PROCEDURE IF EXISTS SARTEN_QUE_LADRA.BI_Migrar_Pago;
 DROP PROCEDURE IF EXISTS SARTEN_QUE_LADRA.BI_Migrar_Hechos_Factura;
 
 -- ============================== -- 
---				VIEWS	          --
+--		VIEWS	          --
 -- ============================== --
 
 DROP VIEW IF EXISTS SARTEN_QUE_LADRA.LOCALIDADES_MAYOR_IMPORTE_CUOTAS;
