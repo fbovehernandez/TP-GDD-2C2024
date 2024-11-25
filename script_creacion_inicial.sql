@@ -120,7 +120,6 @@ CREATE TABLE SARTEN_QUE_LADRA.Venta (
 	venta_codigo DECIMAL(18,0) PRIMARY KEY, 
 	cliente_id DECIMAL(18,0),
 	venta_fecha DATETIME,
-	venta_hora DATETIME,
 	venta_total DECIMAL(18,2)
 );
 
@@ -493,8 +492,8 @@ GO
 
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_VENTA
 AS BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Venta(venta_codigo, cliente_id, venta_fecha, venta_hora, venta_total)
-	SELECT DISTINCT VENTA_CODIGO, c.cliente_id, VENTA_FECHA, NULL, VENTA_TOTAL -- CONSTRAINT DEFAULT NULL 
+	INSERT INTO SARTEN_QUE_LADRA.Venta(venta_codigo, cliente_id, venta_fecha, venta_total)
+	SELECT DISTINCT VENTA_CODIGO, c.cliente_id, VENTA_FECHA, VENTA_TOTAL 
 	FROM gd_esquema.Maestra m
 	JOIN SARTEN_QUE_LADRA.Cliente c ON 
 		 m.CLIENTE_NOMBRE = c.cliente_nombre AND 
