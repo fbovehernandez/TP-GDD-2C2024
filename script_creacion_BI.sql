@@ -24,6 +24,11 @@ CREATE TABLE SARTEN_QUE_LADRA.BI_Localidad (
 	localidad_nombre NVARCHAR(50),
 );
 
+CREATE TABLE SARTEN_QUE_LADRA.BI_Rango_Horario (
+    rango_horario_id DECIMAL(18,0) PRIMARY KEY identity(1,1),
+    rango_horario VARCHAR(20)
+);
+
 CREATE TABLE SARTEN_QUE_LADRA.BI_HECHOS_FACTURA (
 	factura_id DECIMAL(18,0) PRIMARY KEY IDENTITY (1,1),
 	tiempo_id DECIMAL(18,0),
@@ -354,6 +359,27 @@ BEGIN
         ('> 50')
 END
 
+CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Rango_Horario
+AS
+BEGIN
+    INSERT INTO SARTEN_QUE_LADRA.BI_Rango_Horario
+        (rango_horario)
+    VALUES
+        ('00:00 - 06:00')
+    INSERT INTO SARTEN_QUE_LADRA.BI_Rango_Horario
+        (rango_horario)
+    VALUES
+        ('06:00 - 12:00')
+    INSERT INTO SARTEN_QUE_LADRA.BI_Rango_Horario
+        (rango_horario)
+    VALUES
+        ('12:00 - 18:00')
+    INSERT INTO SARTEN_QUE_LADRA.BI_Rango_Horario
+        (rango_horario)
+    VALUES
+        ('18:00 - 24:00')
+END
+	
 GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_HECHOS_ENVIO
 AS BEGIN
@@ -547,7 +573,8 @@ EXEC SARTEN_QUE_LADRA.BI_Migrar_Marca;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Factura;
 EXEC SARTEN_QUE_LADRA.BI_Subrubro;
 EXEC SARTEN_QUE_LADRA.BI_Rubro;
-
+EXEC SARTEN_QUE_LADRA.BI_Migrar_Rango_Horario; -- Si bien no se usa, la entidad debe estar...
+	
 GO
 
 /*** VIEWS ***/
