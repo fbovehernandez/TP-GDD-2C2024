@@ -97,7 +97,7 @@ CREATE TABLE SARTEN_QUE_LADRA.BI_Concepto (
 )
 
 CREATE TABLE SARTEN_QUE_LADRA.Hechos_Publicacion (
-	publicacion_id DECIMAL(18,0) PRIMARY KEY,
+	publicacion_id DECIMAL(18,0) PRIMARY KEY IDENTITY(1,1),
 	publicacion_subrubro_id DECIMAL(18,0),
 	dias_publicada DECIMAL(18,0),
 	tiempo_id DECIMAL(18,0),
@@ -526,8 +526,8 @@ GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Publicacion
 AS
 BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Hechos_Publicacion(publicacion_id, publicacion_subrubro_id, dias_publicada, tiempo_id, marca_id, stock_inicial)
-	SELECT  prXs.subrubro_id, 
+	INSERT INTO SARTEN_QUE_LADRA.Hechos_Publicacion(publicacion_subrubro_id, dias_publicada, tiempo_id, marca_id, stock_inicial)
+	SELECT prXs.subrubro_id, 
 			DATEDIFF(day, p.publicacion_fecha_inicio, p.publicacion_fecha_fin), 
 			SARTEN_QUE_LADRA.BI_Select_Tiempo(p.publicacion_fecha_inicio), 
 			mXpr.marca_id, 
@@ -539,11 +539,9 @@ BEGIN
 	GROUP BY SARTEN_QUE_LADRA.BI_Select_Tiempo(p.publicacion_fecha_inicio), 
 			mXpr.marca_id, 
 			p.publicacion_stock,
-			p.publicacion_codigo,
 			prXs.subrubro_id,
 			DATEDIFF(day, p.publicacion_fecha_inicio, p.publicacion_fecha_fin)
 END
-
 
 GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Factura
