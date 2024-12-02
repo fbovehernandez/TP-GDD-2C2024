@@ -524,7 +524,7 @@ BEGIN
 			DATEDIFF(day, p.publicacion_fecha_inicio, p.publicacion_fecha_fin), 
 			SARTEN_QUE_LADRA.BI_Select_Tiempo(p.publicacion_fecha_inicio), 
 			mXpr.marca_id, 
-			p.publicacion_stock 
+			SUM(p.publicacion_stock)
 	FROM SARTEN_QUE_LADRA.Publicacion p 
 			JOIN SARTEN_QUE_LADRA.Producto pr ON (p.producto_id = pr.producto_id)
 			JOIN SARTEN_QUE_LADRA.ProductoXSubrubro prXs ON (prXs.producto_id = pr.producto_id)
