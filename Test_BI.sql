@@ -59,6 +59,38 @@ SELECT prXs.subrubro_id, YEAR(publicacion_fecha_inicio), MONTH(publicacion_fecha
 		AND MONTH(publicacion_fecha_inicio) = 5 AND mXpr.marca_id = 1
 		AND DATEDIFF(day, p.publicacion_fecha_inicio, p.publicacion_fecha_fin) = 5
 
+/* OTRO TEST MASIVO PUBLICACION */
+SELECT SUM(DATEDIFF(day, p.publicacion_fecha_inicio, p.publicacion_fecha_fin)), prXs.subrubro_id, YEAR(publicacion_fecha_inicio)
+	FROM SARTEN_QUE_LADRA.Publicacion p 
+		JOIN SARTEN_QUE_LADRA.Producto pr ON (p.producto_id = pr.producto_id)
+		JOIN SARTEN_QUE_LADRA.ProductoXSubrubro prXs ON (prXs.producto_id = pr.producto_id)
+	WHERE prXs.subrubro_id = 30 AND YEAR(publicacion_fecha_inicio) = 2025 
+		AND MONTH(publicacion_fecha_inicio) BETWEEN 5 AND 8
+	GROUP BY subrubro_id, YEAR(publicacion_fecha_inicio)
+		-- 31 stock
+SELECT publicacion_subrubro_id, SUM(dias_publicada), stock_inicial, cantidad_publicaciones, anio, cuatrimestre FROM SARTEN_QUE_LADRA.Hechos_Publicacion p
+	JOIN SARTEN_QUE_LADRA.BI_Tiempo t ON t.tiempo_id = p.tiempo_id
+WHERE publicacion_subrubro_id = 30 AND anio = 2025  AND cuatrimestre = 2
+GROUP BY publicacion_subrubro_id, stock_inicial, cantidad_publicaciones, anio, cuatrimestre;
+-- 98 stock, 10 publicaciones
+SELECT publicacion_subrubro_id, SUM(dias_publicada * cantidad_publicaciones), anio, cuatrimestre, SUM(stock_inicial), SUM(cantidad_publicaciones) FROM SARTEN_QUE_LADRA.Hechos_Publicacion p
+	JOIN SARTEN_QUE_LADRA.BI_Tiempo t ON t.tiempo_id = p.tiempo_id
+WHERE publicacion_subrubro_id = 30 AND anio = 2026  AND cuatrimestre = 1 -- 4, 5, 6 y 7
+GROUP BY publicacion_subrubro_id, anio, cuatrimestre; -- 22 dias, 2453 stock, 211 cantidad public --> 5,6
+
+SELECT * FROM SARTEN_QUE_LADRA.BI_Subrubro WHERE subrubro_rubro LIKE 'Sub_Rubro Nº476796'; -- SUBR 30
+SELECT * FROM SARTEN_QUE_LADRA.BI_Subrubro WHERE subrubro_id = 30; --Sub_Rubro Nº476796
+SELECT * FROM SARTEN_QUE_LADRA.PROMEDIO_TIEMPO_PUBLICACIONES
+WHERE subrubro_rubro LIKE 'Sub_Rubro Nº476799' AND cuatrimestre = 1 AND anio = 2026;
+
+SELECT * FROM SARTEN_QUE_LADRA.Hechos_Publicacion;
+
+-- Sub_Rubro Nº476799
+-- 1
+-- 2026
+-- promedio 5,5
+
+
 GO
 SELECT * FROM SARTEN_QUE_LADRA.PROMEDIO_TIEMPO_PUBLICACIONES;
 SELECT * FROM SARTEN_QUE_LADRA.PROMEDIO_STOCK_PUBLICACION;
