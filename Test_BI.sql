@@ -48,6 +48,17 @@ JOIN SARTEN_QUE_LADRA.Provincia p ON p.provincia_id = l.provincia_id
 WHERE YEAR(f.factura_fecha) = 2026 AND MONTH(f.factura_fecha) = 1 AND df.detalle_concepto_id = 3 
 	AND p.provincia_id = 12
 
+/* TEST MASIVO PUBLICACION */
+SELECT prXs.subrubro_id, YEAR(publicacion_fecha_inicio), MONTH(publicacion_fecha_inicio), 
+			mXpr.marca_id, p.publicacion_stock
+	FROM SARTEN_QUE_LADRA.Publicacion p 
+		JOIN SARTEN_QUE_LADRA.Producto pr ON (p.producto_id = pr.producto_id)
+		JOIN SARTEN_QUE_LADRA.ProductoXSubrubro prXs ON (prXs.producto_id = pr.producto_id)
+		JOIN SARTEN_QUE_LADRA.MarcaXProducto mXpr ON (mXpr.producto_id = pr.producto_id)
+	WHERE prXs.subrubro_id = 30 AND YEAR(publicacion_fecha_inicio) = 2025 
+		AND MONTH(publicacion_fecha_inicio) = 5 AND mXpr.marca_id = 1
+		AND DATEDIFF(day, p.publicacion_fecha_inicio, p.publicacion_fecha_fin) = 5
+
 GO
 SELECT * FROM SARTEN_QUE_LADRA.PROMEDIO_TIEMPO_PUBLICACIONES;
 SELECT * FROM SARTEN_QUE_LADRA.PROMEDIO_STOCK_PUBLICACION;
