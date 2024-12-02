@@ -527,7 +527,7 @@ CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Publicacion
 AS
 BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.Hechos_Publicacion(publicacion_subrubro_id, dias_publicada, tiempo_id, marca_id, stock_inicial)
-	SELECT prXs.subrubro_id, 
+	SELECT DISTINCT prXs.subrubro_id, 
 			DATEDIFF(day, p.publicacion_fecha_inicio, p.publicacion_fecha_fin), 
 			SARTEN_QUE_LADRA.BI_Select_Tiempo(p.publicacion_fecha_inicio), 
 			mXpr.marca_id, 
@@ -538,7 +538,6 @@ BEGIN
 			JOIN SARTEN_QUE_LADRA.MarcaXProducto mXpr ON (mXpr.producto_id = pr.producto_id)
 	GROUP BY SARTEN_QUE_LADRA.BI_Select_Tiempo(p.publicacion_fecha_inicio), 
 			mXpr.marca_id, 
-			p.publicacion_stock,
 			prXs.subrubro_id,
 			DATEDIFF(day, p.publicacion_fecha_inicio, p.publicacion_fecha_fin)
 END
