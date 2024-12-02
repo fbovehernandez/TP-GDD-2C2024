@@ -626,7 +626,7 @@ AS
 
 /* 4. Rendimiento de rubros. Los 5 rubros con mayores ventas para cada
 cuatrimestre de cada año según la localidad y rango etario de los clientes. */
-
+GO
 CREATE VIEW SARTEN_QUE_LADRA.RENDIMIENTO_RUBROS AS
 WITH VentasClasificadas AS (
     SELECT
@@ -668,7 +668,6 @@ FROM
     VentasClasificadas
 WHERE
     ranking <= 5;
-GO
 	
 /* 6. Pago en Cuotas. Las 3 localidades con el mayor importe de pagos en cuotas,
 según el medio de pago, mes y año. Se calcula sumando los importes totales de
@@ -739,14 +738,3 @@ AS
 	JOIN SARTEN_QUE_LADRA.BI_Tiempo t ON hf.tiempo_id = t.tiempo_id
 	JOIN SARTEN_QUE_LADRA.BI_Provincia p ON p.id = hf.provincia_vendedor_id
 	GROUP BY p.provincia_nombre, t.cuatrimestre, t.anio
-
-GO
-SELECT * FROM SARTEN_QUE_LADRA.PROMEDIO_TIEMPO_PUBLICACIONES;
-SELECT * FROM SARTEN_QUE_LADRA.PROMEDIO_STOCK_PUBLICACION;
-SELECT * FROM SARTEN_QUE_LADRA.VENTA_PROMEDIO_MENSUAL;
-SELECT * FROM SARTEN_QUE_LADRA.RENDIMIENTO_RUBROS;
-SELECT * FROM SARTEN_QUE_LADRA.LOCALIDADES_MAYOR_IMPORTE_CUOTAS;
-SELECT * FROM SARTEN_QUE_LADRA.PORCENTAJE_ENVIOS_A_TIEMPO;
-SELECT * FROM SARTEN_QUE_LADRA.LOCALIDADES_MAS_PAGAS;
-SELECT * FROM SARTEN_QUE_LADRA.PORCENTAJE_FACTURACION_CONCEPTO;
-SELECT * FROM SARTEN_QUE_LADRA.FACTURACION_PROVINCIA;
