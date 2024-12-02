@@ -626,7 +626,7 @@ AS
 
 /* 4. Rendimiento de rubros. Los 5 rubros con mayores ventas para cada
 cuatrimestre de cada año según la localidad y rango etario de los clientes. */
-
+GO
 CREATE VIEW SARTEN_QUE_LADRA.RENDIMIENTO_RUBROS AS
 WITH VentasClasificadas AS (
     SELECT
@@ -668,7 +668,6 @@ FROM
     VentasClasificadas
 WHERE
     ranking <= 5;
-GO
 	
 /* 6. Pago en Cuotas. Las 3 localidades con el mayor importe de pagos en cuotas,
 según el medio de pago, mes y año. Se calcula sumando los importes totales de
