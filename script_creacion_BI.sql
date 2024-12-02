@@ -537,6 +537,12 @@ BEGIN
 			JOIN SARTEN_QUE_LADRA.Producto pr ON (p.producto_id = pr.producto_id)
 			JOIN SARTEN_QUE_LADRA.ProductoXSubrubro prXs ON (prXs.producto_id = pr.producto_id)
 			JOIN SARTEN_QUE_LADRA.MarcaXProducto mXpr ON (mXpr.producto_id = pr.producto_id)
+	GROUP BY SARTEN_QUE_LADRA.BI_Select_Tiempo(p.publicacion_fecha_inicio), 
+			mXpr.marca_id, 
+			p.publicacion_stock,
+			p.publicacion_codigo,
+			prXs.subrubro_id,
+			DATEDIFF(day, p.publicacion_fecha_inicio, p.publicacion_fecha_fin)
 END
 
 
