@@ -1,1 +1,2 @@
+-> Dudas TP / Correcciones
 -> COUNT(*) de la View 3, deberia ser un SUM en la migracion, sino se estan perdiendo filas. No nos lo corrigieron, pero enrealidad habria que cambiarlo
