@@ -598,7 +598,7 @@ la fecha de inicio y fin. Se toma en cuenta la fecha de inicio */
 GO
 CREATE VIEW SARTEN_QUE_LADRA.PROMEDIO_TIEMPO_PUBLICACIONES
 AS
-	SELECT rb.subrubro_rubro, tiempo.cuatrimestre, tiempo.anio, SUM(p.dias_publicada) / SUM(p.cantidad_publicaciones) 'Promedio tiempo de publicacion' 
+	SELECT rb.subrubro_rubro, tiempo.cuatrimestre, tiempo.anio, SUM(p.dias_publicada * p.cantidad_publicaciones) / SUM(p.cantidad_publicaciones) 'Promedio tiempo de publicacion' 
 	FROM SARTEN_QUE_LADRA.Hechos_Publicacion p
 		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON (p.tiempo_id = tiempo.tiempo_id)
 		JOIN SARTEN_QUE_LADRA.BI_Subrubro rb ON (rb.subrubro_id = p.publicacion_subrubro_id)
