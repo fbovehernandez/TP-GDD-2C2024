@@ -600,7 +600,6 @@ AS
 	FROM SARTEN_QUE_LADRA.Hechos_Publicacion p
 		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON (p.tiempo_id = tiempo.tiempo_id)
 		JOIN SARTEN_QUE_LADRA.BI_Subrubro rb ON (rb.subrubro_id = p.publicacion_subrubro_id)
-	WHERE anio = 2025 AND cuatrimestre = 2 AND subrubro_id = 30
 	GROUP BY tiempo.cuatrimestre, tiempo.anio, rb.subrubro_rubro;
 
 /* 2. Promedio de Stock Inicial. Cantidad de stock promedio con que se dan de alta
