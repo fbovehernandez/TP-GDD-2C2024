@@ -610,7 +610,7 @@ las publicaciones según la Marca de los productos publicados por año. */
 GO
 CREATE VIEW SARTEN_QUE_LADRA.PROMEDIO_STOCK_PUBLICACION
 AS
-	SELECT tiempo.anio, m.marca_nombre, SUM(p.stock_inicial) / SUM(p.cantidad_publicaciones) 'Promedio stock de publicacion' 
+	SELECT tiempo.anio, m.marca_nombre, SUM(p.stock_inicial * p.cantidad_publicaciones) / SUM(p.cantidad_publicaciones) 'Promedio stock de publicacion' 
 	FROM SARTEN_QUE_LADRA.Hechos_Publicacion p
 		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON p.tiempo_id = tiempo.tiempo_id
 		JOIN SARTEN_QUE_LADRA.BI_Marca m ON m.marca_id = p.marca_id
