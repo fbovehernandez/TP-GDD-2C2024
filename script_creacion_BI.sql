@@ -103,6 +103,7 @@ CREATE TABLE SARTEN_QUE_LADRA.Hechos_Publicacion (
 	tiempo_id DECIMAL(18,0),
 	marca_id DECIMAL(18,0), 
 	stock_inicial DECIMAL(18,0),
+	cantidad_publicaciones DECIMAL(18,0)
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.BI_Marca (
