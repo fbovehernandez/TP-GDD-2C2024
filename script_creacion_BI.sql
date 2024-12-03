@@ -526,12 +526,13 @@ GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Publicacion
 AS
 BEGIN
-	INSERT INTO SARTEN_QUE_LADRA.Hechos_Publicacion(publicacion_subrubro_id, dias_publicada, tiempo_id, marca_id, stock_inicial)
+	INSERT INTO SARTEN_QUE_LADRA.Hechos_Publicacion(publicacion_subrubro_id, dias_publicada, tiempo_id, marca_id, stock_inicial, cantidad_publicaciones)
 	SELECT DISTINCT prXs.subrubro_id, 
 			DATEDIFF(day, p.publicacion_fecha_inicio, p.publicacion_fecha_fin), 
 			SARTEN_QUE_LADRA.BI_Select_Tiempo(p.publicacion_fecha_inicio), 
 			mXpr.marca_id, 
-			SUM(p.publicacion_stock)
+			SUM(p.publicacion_stock),
+			COUNT(p.publicacion_codigo)
 	FROM SARTEN_QUE_LADRA.Publicacion p 
 			JOIN SARTEN_QUE_LADRA.Producto pr ON (p.producto_id = pr.producto_id)
 			JOIN SARTEN_QUE_LADRA.ProductoXSubrubro prXs ON (prXs.producto_id = pr.producto_id)
@@ -559,6 +560,7 @@ AS BEGIN
 			  SARTEN_QUE_LADRA.BI_Select_Provincia_Vendedor(f.vendedor_id),
 			  df.detalle_concepto_id
 END
+	
 GO
 
 -- ============================== -- 
@@ -582,6 +584,7 @@ EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Factura;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Rango_Horario;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Venta;	
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Hechos_Envio;
+
 GO
 
 /*** VIEWS ***/
@@ -594,7 +597,7 @@ la fecha de inicio y fin. Se toma en cuenta la fecha de inicio */
 GO
 CREATE VIEW SARTEN_QUE_LADRA.PROMEDIO_TIEMPO_PUBLICACIONES
 AS
-	SELECT rb.subrubro_rubro, tiempo.cuatrimestre, tiempo.anio, SUM(p.dias_publicada) / COUNT(*) 'Promedio tiempo de publicacion' 
+	SELECT rb.subrubro_rubro, tiempo.cuatrimestre, tiempo.anio, SUM(p.dias_publicada) / SUM(p.cantidad_publicaciones) 'Promedio tiempo de publicacion' 
 	FROM SARTEN_QUE_LADRA.Hechos_Publicacion p
 		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON (p.tiempo_id = tiempo.tiempo_id)
 		JOIN SARTEN_QUE_LADRA.BI_Subrubro rb ON (rb.subrubro_id = p.publicacion_subrubro_id)
@@ -606,11 +609,11 @@ las publicaciones según la Marca de los productos publicados por año. */
 GO
 CREATE VIEW SARTEN_QUE_LADRA.PROMEDIO_STOCK_PUBLICACION
 AS
-	SELECT tiempo.anio, m.marca_nombre, SUM(p.stock_inicial) / COUNT(*) 'Promedio stock de publicacion' 
+	SELECT tiempo.anio, m.marca_nombre, SUM(p.stock_inicial) / SUM(p.cantidad_publicaciones) 'Promedio stock de publicacion' 
 	FROM SARTEN_QUE_LADRA.Hechos_Publicacion p
 		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON p.tiempo_id = tiempo.tiempo_id
 		JOIN SARTEN_QUE_LADRA.BI_Marca m ON m.marca_id = p.marca_id
-	GROUP BY tiempo.anio, m.marca_nombre
+	GROUP BY tiempo.anio, m.marca_nombre;
 
 /* 3. Venta promedio mensual. Valor promedio de las ventas (en $) según la
 provincia correspondiente a la ubicación del almacén para cada mes de cada año
@@ -675,6 +678,7 @@ WHERE
 según el medio de pago, mes y año. Se calcula sumando los importes totales de
 todas las ventas en cuotas. Se toma la localidad del cliente (Si tiene más de una
 dirección se toma a la que seleccionó el envío) */
+
 GO
 CREATE VIEW SARTEN_QUE_LADRA.LOCALIDADES_MAYOR_IMPORTE_CUOTAS
 AS
