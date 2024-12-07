@@ -1,4 +1,7 @@
 -- DROP CONSTRAINT
+ALTER TABLE SARTEN_QUE_LADRA.ProductoXRubro DROP CONSTRAINT fk_productorubro_producto;
+ALTER TABLE SARTEN_QUE_LADRA.ProductoXRubro DROP CONSTRAINT fk_productorubro_rubro;
+
 ALTER TABLE SARTEN_QUE_LADRA.SubrubroXRubro DROP CONSTRAINT IF EXISTS fk_subrubroxrubro_rubro_id;
 ALTER TABLE SARTEN_QUE_LADRA.SubrubroXRubro DROP CONSTRAINT IF EXISTS fk_subrubroxrubro_subrubro_id;
 
