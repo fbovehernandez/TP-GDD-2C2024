@@ -1,8 +1,7 @@
 USE GD2C2024
 GO
-CREATE SCHEMA SARTEN_QUE_LADRA
+// SCHEMA
 GO
-
 -- ============================== --
 --          TABLAS		  --
 -- ============================== --
@@ -16,6 +15,12 @@ CREATE TABLE SARTEN_QUE_LADRA.Subrubro (
 	subrubro_id DECIMAL(18,0) IDENTITY(1,1) PRIMARY KEY,
 	subrubro_rubro NVARCHAR(50)
 ); 
+
+CREATE TABLE SARTEN_QUE_LADRA.ProductoXRubro (
+	producto_id DECIMAL(18,0),
+	rubro_id DECIMAL(18,0),
+	PRIMARY KEY (producto_id, rubro_id),
+);
 
 CREATE TABLE SARTEN_QUE_LADRA.SubrubroXRubro (
 	subrubro_id DECIMAL(18,0),
@@ -223,6 +228,10 @@ CREATE TABLE SARTEN_QUE_LADRA.MedioXPago(
 -- ============================== --
 --         CONSTRAINTS            --
 -- ============================== --
+
+-- FK -> ProductoXRubro
+ALTER TABLE SARTEN_QUE_LADRA.ProductoXRubro ADD CONSTRAINT fk_productorubro_producto FOREIGN KEY (producto_id) REFERENCES SARTEN_QUE_LADRA.Producto (producto_id);
+ALTER TABLE SARTEN_QUE_LADRA.ProductoXRubro ADD CONSTRAINT fk_productorubro_rubro FOREIGN KEY (rubro_id) REFERENCES SARTEN_QUE_LADRA.Rubro (rubro_id);
 
 -- FK -> SubrubroXRubro
 ALTER TABLE SARTEN_QUE_LADRA.SubrubroXRubro ADD CONSTRAINT fk_subrubroxrubro_rubro_id FOREIGN KEY (rubro_id) REFERENCES SARTEN_QUE_LADRA.Rubro (rubro_id);
@@ -648,6 +657,18 @@ END
 
 GO
 
+CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PRODUCTOXRUBRO
+AS BEGIN
+	INSERT INTO SARTEN_QUE_LADRA.ProductoXRubro (producto_id, rubro_id)
+	SELECT DISTINCT producto_id, rubro_id
+	FROM gd_esquema.Maestra maestra JOIN SARTEN_QUE_LADRA.Producto producto ON maestra.PRODUCTO_CODIGO = producto.producto_codigo
+										AND maestra.PRODUCTO_DESCRIPCION = producto.producto_descripcion
+										AND maestra.PRODUCTO_PRECIO = producto.producto_precio
+									JOIN SARTEN_QUE_LADRA.rubro rubro ON maestra.PRODUCTO_RUBRO_DESCRIPCION = rubro.rubro_descripcion
+	WHERE maestra.PRODUCTO_CODIGO IS NOT NULL AND PRODUCTO_RUBRO_DESCRIPCION IS NOT NULL;
+END
+GO
+
 CREATE PROCEDURE SARTEN_QUE_LADRA.MIGRAR_PRODUCTOXSUBRUBRO
 AS BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.ProductoXSubrubro (producto_id, subrubro_id)
@@ -751,3 +772,4 @@ EXEC SARTEN_QUE_LADRA.MIGRAR_PAGO;
 EXEC SARTEN_QUE_LADRA.MIGRAR_TIPO_MEDIO_PAGO;
 EXEC SARTEN_QUE_LADRA.MIGRAR_MEDIO_PAGO;
 EXEC SARTEN_QUE_LADRA.MIGRAR_MEDIOXPAGO;
+EXEC SARTEN_QUE_LADRA.MIGRAR_PRODUCTOXRUBRO;
