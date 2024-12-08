@@ -1,6 +1,6 @@
 USE GD2C2024
 GO
-// SCHEMA
+CREATE SCHEMA SARTEN_QUE_LADRA
 GO
 -- ============================== --
 --          TABLAS		  --
