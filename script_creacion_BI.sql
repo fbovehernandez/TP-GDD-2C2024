@@ -1,5 +1,34 @@
-/*** TABLAS ***/
+/*** TABLAS ***/ --> 
 
+
+
+/******************************************************************************************************************************************************************************
+/******************************************************************************************************************************************************************************
+/******************************************************************************************************************************************************************************
+/******************************************************************************************************************************************************************************
+/******************************************************************************************************************************************************************************
+/******************************************************************************************************************************************************************************
+/******************************************************************************************************************************************************************************
+/******************************************************************************************************************************************************************************
+VERSION ANTERIOR, VERSION ANTERIOR ,VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR 
+VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR 
+VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR 
+VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR 
+VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR 
+VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR 
+VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR 
+VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR VERSION ANTERIOR 
+******************************************************************************************************************************************************************************\
+******************************************************************************************************************************************************************************\
+******************************************************************************************************************************************************************************\
+******************************************************************************************************************************************************************************\
+******************************************************************************************************************************************************************************\
+******************************************************************************************************************************************************************************\
+******************************************************************************************************************************************************************************\
+******************************************************************************************************************************************************************************\
+******************************************************************************************************************************************************************************\
+
+/*
 CREATE TABLE SARTEN_QUE_LADRA.BI_Tiempo (
 	tiempo_id DECIMAL(18,0) PRIMARY KEY IDENTITY(1,1),
 	mes DECIMAL(2,0),
@@ -745,3 +774,5 @@ AS
 	JOIN SARTEN_QUE_LADRA.BI_Tiempo t ON hf.tiempo_id = t.tiempo_id
 	JOIN SARTEN_QUE_LADRA.BI_Provincia p ON p.id = hf.provincia_vendedor_id
 	GROUP BY p.provincia_nombre, t.cuatrimestre, t.anio
+
+*/
