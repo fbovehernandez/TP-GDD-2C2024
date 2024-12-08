@@ -58,7 +58,8 @@ CREATE TABLE SARTEN_QUE_LADRA.Hechos_Venta(
 	rubro_id DECIMAL(18,0),
 	localidad_cliente_id DECIMAL(18,0),
 	rango_etario_cliente  DECIMAL(18,0),
-	importe_venta DECIMAL(18,2)
+	importe_venta DECIMAL(18,2),
+	cantidad_ventas DECIMAL(18,0)
 );
 
 CREATE TABLE SARTEN_QUE_LADRA.BI_Hechos_Envio(
@@ -278,40 +279,21 @@ AS BEGIN
     RETURN @resultado
 END
 
-SELECT DISTINCT PRODUCTO_DESCRIPCION, PRODUCTO_CODIGO, PRODUCTO_PRECIO, PRODUCTO_SUB_RUBRO,
-PRODUCTO_RUBRO_DESCRIPCION FROM gd_esquema.Maestra
-WHERE PRODUCTO_CODIGO = 'Codigo:4131231312' 
-	AND PRODUCTO_SUB_RUBRO = 'Sub_Rubro Nº476826' 
-
-SELECT DISTINCT pxs.subrubro_id FROM SARTEN_QUE_LADRA.Producto p 
-	JOIN SARTEN_QUE_LADRA.ProductoXSubrubro pxs ON pxs.producto_id = p.producto_id WHERE p.producto_codigo = 'Codigo:0131231312' 
-
-SELECT * FROM SARTEN_QUE_LADRA.Venta v 
-JOIN SARTEN_QUE_LADRA.DetalleVenta dv ON dv.venta_codigo = v.venta_codigo 
-JOIN SARTEN_QUE_LADRA.Publicacion pub ON pub.publicacion_codigo = dv.publicacion_codigo
-JOIN SARTEN_QUE_LADRA.Producto pr ON pr.producto_id = pub.producto_id 
-JOIN SARTEN_QUE_LADRA.ProductoXSubrubro pxs ON pxs.producto_id = pr.producto_id
-JOIN SARTEN_QUE_LADRA.ProductoXRubro pxr ON pxr.producto_id = pr.producto_id
-WHERE pr.producto_id = 4473
-
-SELECT DISTINCT p.producto_id, p.producto_codigo, pxs.subrubro_id FROM SARTEN_QUE_LADRA.Producto p 
-JOIN SARTEN_QUE_LADRA.ProductoXSubrubro pxs ON pxs.producto_id = p.producto_id
-WHERE p.producto_codigo = 'Codigo:5131231312'
-
-SELECT * FROM SARTEN_QUE_LADRA.Rubro
+/*** PROCEDURES ***/
 
 GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Hechos_Venta
 AS BEGIN
 	INSERT INTO SARTEN_QUE_LADRA.Hechos_Venta
-		(provincia_almacen_id, rango_etario_cliente, tiempo_id, rubro_id, localidad_cliente_id, importe_venta)
+		(provincia_almacen_id, rango_etario_cliente, tiempo_id, rubro_id, localidad_cliente_id, importe_venta, cantidad_ventas)
 	SELECT 
 			SARTEN_QUE_LADRA.BI_Select_Provincia_Almacen(pub.almacen_codigo) as Provincia_almacen, 
 			SARTEN_QUE_LADRA.BI_Select_Rango_Etario(c.cliente_fecha_nac) as Rango_etario,
-			pxr.rubro_id,
 			SARTEN_QUE_LADRA.BI_Select_Tiempo(v.venta_fecha) as Tiempo,
+			pxr.rubro_id,
 			SARTEN_QUE_LADRA.BI_Select_Localidad_Cliente(v.cliente_id) as Localidad_cliente,
-			SUM(v.venta_total) as Suma_total
+			SUM(v.venta_total) as Suma_total,
+			COUNT(v.venta_codigo)
 	FROM SARTEN_QUE_LADRA.Venta v
 		JOIN SARTEN_QUE_LADRA.Cliente c ON c.cliente_id = v.cliente_id
 		JOIN SARTEN_QUE_LADRA.DetalleVenta dv ON v.venta_codigo = dv.venta_codigo
@@ -325,12 +307,7 @@ AS BEGIN
 		pxr.rubro_id,
 		SARTEN_QUE_LADRA.BI_Select_Rango_Etario(c.cliente_fecha_nac) 
 END
-
 GO
-
-/* */
-
-/*** PROCEDURES ***/
 
 GO
 CREATE PROCEDURE SARTEN_QUE_LADRA.BI_Migrar_Rubro
@@ -578,6 +555,7 @@ GO
 -- ============================== -- 
 --      EXEC PROCEDURES         --
 -- ============================== --
+
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Rango_Etario;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Rubro;
 EXEC SARTEN_QUE_LADRA.BI_Migrar_Provincia;
@@ -635,7 +613,7 @@ las mismas.*/
 GO
 CREATE VIEW SARTEN_QUE_LADRA.VENTA_PROMEDIO_MENSUAL
 AS
-	SELECT DISTINCT anio, mes, provincia_nombre, SUM(importe_venta) / COUNT(venta.venta_id) 'Venta Promedio Mensual Según Provincia'
+	SELECT DISTINCT anio, mes, provincia_nombre, SUM(importe_venta) / SUM(cantidad_ventas) 'Venta Promedio Mensual Según Provincia'
 	FROM SARTEN_QUE_LADRA.Hechos_Venta venta
 		JOIN SARTEN_QUE_LADRA.BI_Provincia provincia ON venta.provincia_almacen_id = provincia.id
 		JOIN SARTEN_QUE_LADRA.BI_Tiempo tiempo ON venta.tiempo_id = tiempo.tiempo_id
@@ -643,6 +621,7 @@ AS
 
 /* 4. Rendimiento de rubros. Los 5 rubros con mayores ventas para cada
 cuatrimestre de cada año según la localidad y rango etario de los clientes. */
+	
 GO
 CREATE VIEW SARTEN_QUE_LADRA.RENDIMIENTO_RUBROS AS
 WITH VentasClasificadas AS (
